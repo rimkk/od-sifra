@@ -12,6 +12,7 @@ import messageRoutes from './routes/message.routes';
 import notificationRoutes from './routes/notification.routes';
 import adminRoutes from './routes/admin.routes';
 import invitationRoutes from './routes/invitation.routes';
+import customerAccountRoutes from './routes/customerAccounts';
 import { errorHandler } from './middleware/errorHandler';
 import { setupSocketHandlers } from './socket/handlers';
 import { prisma } from './lib/prisma';
@@ -48,6 +49,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/invitations', invitationRoutes);
+app.use('/api/customer-accounts', customerAccountRoutes);
 
 // Error handler
 app.use(errorHandler);

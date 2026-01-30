@@ -4,7 +4,7 @@ import { AppError } from '../middleware/errorHandler';
 import { Decimal } from '@prisma/client/runtime/library';
 
 export interface CreatePropertyData {
-  customerId: string;
+  customerAccountId: string;
   address: string;
   city: string;
   postalCode?: string;
@@ -26,26 +26,26 @@ export interface UpdatePropertyData extends Partial<CreatePropertyData> {}
 
 export const propertyService = {
   async createProperty(data: CreatePropertyData, creatorId: string, creatorRole: UserRole) {
-    // Verify customer exists and creator has permission
-    const customer = await prisma.user.findUnique({
-      where: { id: data.customerId },
+    // Verify customer account exists
+    const customerAccount = await prisma.customerAccount.findUnique({
+      where: { id: data.customerAccountId },
     });
 
-    if (!customer || customer.role !== UserRole.CUSTOMER) {
-      throw new AppError('Customer not found', 404);
+    if (!customerAccount) {
+      throw new AppError('Customer account not found', 404);
     }
 
     // Only admin or assigned employee can create properties
     if (creatorRole === UserRole.EMPLOYEE) {
       const assignment = await prisma.customerAssignment.findFirst({
         where: {
-          customerId: data.customerId,
+          customerAccountId: data.customerAccountId,
           employeeId: creatorId,
         },
       });
 
       if (!assignment) {
-        throw new AppError('Not authorized to manage this customer', 403);
+        throw new AppError('Not authorized to manage this customer account', 403);
       }
     }
 
@@ -56,11 +56,10 @@ export const propertyService = {
         monthlyRent: new Decimal(data.monthlyRent),
       },
       include: {
-        customer: {
+        customerAccount: {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -73,11 +72,17 @@ export const propertyService = {
     const property = await prisma.property.findUnique({
       where: { id: propertyId },
       include: {
-        customer: {
+        customerAccount: {
           select: {
             id: true,
             name: true,
-            email: true,
+            users: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
           },
         },
         renovations: {
@@ -99,15 +104,22 @@ export const propertyService = {
       throw new AppError('Property not found', 404);
     }
 
-    // Check access
-    if (userRole === UserRole.CUSTOMER && property.customerId !== userId) {
-      throw new AppError('Not authorized to view this property', 403);
+    // Check access for customers - must belong to the customer account
+    if (userRole === UserRole.CUSTOMER) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { customerAccountId: true },
+      });
+      
+      if (!user?.customerAccountId || property.customerAccountId !== user.customerAccountId) {
+        throw new AppError('Not authorized to view this property', 403);
+      }
     }
 
     if (userRole === UserRole.EMPLOYEE) {
       const assignment = await prisma.customerAssignment.findFirst({
         where: {
-          customerId: property.customerId,
+          customerAccountId: property.customerAccountId,
           employeeId: userId,
         },
       });
@@ -120,9 +132,9 @@ export const propertyService = {
     return property;
   },
 
-  async getPropertiesByCustomer(customerId: string) {
+  async getPropertiesByCustomerAccount(customerAccountId: string) {
     return prisma.property.findMany({
-      where: { customerId },
+      where: { customerAccountId },
       include: {
         renovations: {
           where: { status: { not: 'COMPLETED' } },
@@ -137,6 +149,20 @@ export const propertyService = {
     });
   },
 
+  // Backward compatible method - gets properties for a user by their customer account
+  async getPropertiesByCustomer(customerId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: customerId },
+      select: { customerAccountId: true },
+    });
+
+    if (!user?.customerAccountId) {
+      return [];
+    }
+
+    return this.getPropertiesByCustomerAccount(user.customerAccountId);
+  },
+
   async getAllProperties(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
@@ -145,11 +171,10 @@ export const propertyService = {
         skip,
         take: limit,
         include: {
-          customer: {
+          customerAccount: {
             select: {
               id: true,
               name: true,
-              email: true,
             },
           },
         },
@@ -187,7 +212,7 @@ export const propertyService = {
     if (userRole === UserRole.EMPLOYEE) {
       const assignment = await prisma.customerAssignment.findFirst({
         where: {
-          customerId: property.customerId,
+          customerAccountId: property.customerAccountId,
           employeeId: userId,
         },
       });
@@ -209,11 +234,10 @@ export const propertyService = {
       where: { id: propertyId },
       data: updateData,
       include: {
-        customer: {
+        customerAccount: {
           select: {
             id: true,
             name: true,
-            email: true,
           },
         },
       },
@@ -241,9 +265,9 @@ export const propertyService = {
     return { success: true };
   },
 
-  async getPropertyFinancials(customerId: string) {
+  async getPropertyFinancialsByAccount(customerAccountId: string) {
     const properties = await prisma.property.findMany({
-      where: { customerId },
+      where: { customerAccountId },
       select: {
         id: true,
         address: true,
@@ -280,5 +304,27 @@ export const propertyService = {
         status: p.status,
       })),
     };
+  },
+
+  // Backward compatible method - gets financials for a user by their customer account
+  async getPropertyFinancials(customerId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: customerId },
+      select: { customerAccountId: true },
+    });
+
+    if (!user?.customerAccountId) {
+      return {
+        totalProperties: 0,
+        activeProperties: 0,
+        vacantProperties: 0,
+        totalPurchaseCost: 0,
+        totalMonthlyRent: 0,
+        estimatedAnnualIncome: 0,
+        properties: [],
+      };
+    }
+
+    return this.getPropertyFinancialsByAccount(user.customerAccountId);
   },
 };

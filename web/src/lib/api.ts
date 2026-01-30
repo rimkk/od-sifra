@@ -90,6 +90,41 @@ export const adminApi = {
   toggleUserStatus: (id: string) => api.put(`/admin/users/${id}/toggle-status`),
 };
 
+// Customer Accounts API
+export const customerAccountApi = {
+  // Get all customer accounts
+  getAll: () => api.get('/customer-accounts'),
+  // Get single account
+  getById: (id: string) => api.get(`/customer-accounts/${id}`),
+  // Create new account (with optional primary user)
+  create: (data: {
+    accountName: string;
+    description?: string;
+    primaryUser?: {
+      email: string;
+      password: string;
+      name: string;
+      phone?: string;
+    };
+  }) => api.post('/customer-accounts', data),
+  // Update account
+  update: (id: string, data: { name?: string; description?: string }) =>
+    api.patch(`/customer-accounts/${id}`, data),
+  // Add user directly to account
+  addUser: (accountId: string, data: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+  }) => api.post(`/customer-accounts/${accountId}/users`, data),
+  // Invite multiple users to account
+  inviteUsers: (accountId: string, emails: string[]) =>
+    api.post(`/customer-accounts/${accountId}/invite`, { emails }),
+  // Remove user from account
+  removeUser: (accountId: string, userId: string) =>
+    api.delete(`/customer-accounts/${accountId}/users/${userId}`),
+};
+
 // Notification API
 export const notificationApi = {
   getAll: (page = 1) => api.get(`/notifications?page=${page}`),

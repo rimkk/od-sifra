@@ -36,6 +36,7 @@ export const authService = {
 
     let role: UserRole = UserRole.CUSTOMER;
     let inviterId: string | null = null;
+    let customerAccountId: string | null = null;
 
     // Handle invitation-based registration
     if (invitationToken) {
@@ -61,6 +62,7 @@ export const authService = {
 
       role = invitation.role;
       inviterId = invitation.inviterId;
+      customerAccountId = invitation.customerAccountId;
 
       // Mark invitation as used
       await prisma.invitation.update({
@@ -81,19 +83,25 @@ export const authService = {
         phone,
         role,
         invitedById: inviterId,
+        customerAccountId: customerAccountId,
       },
     });
 
-    // If customer was invited by employee, create assignment
-    if (role === UserRole.CUSTOMER && inviterId) {
+    // If customer was invited by employee and has a customer account, create assignment
+    if (role === UserRole.CUSTOMER && inviterId && customerAccountId) {
       const inviter = await prisma.user.findUnique({
         where: { id: inviterId },
       });
 
-      if (inviter?.role === UserRole.EMPLOYEE) {
+      // Check if assignment already exists for this account
+      const existingAssignment = await prisma.customerAssignment.findUnique({
+        where: { customerAccountId: customerAccountId },
+      });
+
+      if (inviter?.role === UserRole.EMPLOYEE && !existingAssignment) {
         await prisma.customerAssignment.create({
           data: {
-            customerId: user.id,
+            customerAccountId: customerAccountId,
             employeeId: inviterId,
           },
         });

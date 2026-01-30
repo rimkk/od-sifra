@@ -35,39 +35,68 @@ async function main() {
   });
   console.log('✅ Employee user created:', employee.email);
 
-  // Create customer user
+  // Create a customer account (shared account for multiple users)
+  const customerAccount = await prisma.customerAccount.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000100' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000100',
+      name: 'Smith Family',
+      description: 'Property investment account for the Smith family',
+    },
+  });
+  console.log('✅ Customer account created:', customerAccount.name);
+
+  // Create customer user (linked to customer account)
   const customerPassword = await bcrypt.hash('customer123', 12);
   const customer = await prisma.user.upsert({
     where: { email: 'customer@odsifra.com' },
-    update: {},
+    update: { customerAccountId: customerAccount.id },
     create: {
       email: 'customer@odsifra.com',
       passwordHash: customerPassword,
-      name: 'Jane Customer',
+      name: 'Jane Smith',
       role: UserRole.CUSTOMER,
       invitedById: employee.id,
+      customerAccountId: customerAccount.id,
     },
   });
   console.log('✅ Customer user created:', customer.email);
 
-  // Assign customer to employee
+  // Create second customer user for same account (e.g., spouse)
+  const customer2Password = await bcrypt.hash('customer123', 12);
+  const customer2 = await prisma.user.upsert({
+    where: { email: 'john@odsifra.com' },
+    update: { customerAccountId: customerAccount.id },
+    create: {
+      email: 'john@odsifra.com',
+      passwordHash: customer2Password,
+      name: 'John Smith',
+      role: UserRole.CUSTOMER,
+      invitedById: employee.id,
+      customerAccountId: customerAccount.id,
+    },
+  });
+  console.log('✅ Second customer user created:', customer2.email);
+
+  // Assign customer account to employee
   await prisma.customerAssignment.upsert({
-    where: { customerId: customer.id },
+    where: { customerAccountId: customerAccount.id },
     update: {},
     create: {
-      customerId: customer.id,
+      customerAccountId: customerAccount.id,
       employeeId: employee.id,
     },
   });
-  console.log('✅ Customer assigned to employee');
+  console.log('✅ Customer account assigned to employee');
 
-  // Create sample properties
+  // Create sample properties (linked to customer account)
   const property1 = await prisma.property.upsert({
     where: { id: '00000000-0000-0000-0000-000000000001' },
-    update: {},
+    update: { customerAccountId: customerAccount.id },
     create: {
       id: '00000000-0000-0000-0000-000000000001',
-      customerId: customer.id,
+      customerAccountId: customerAccount.id,
       address: '123 Main Street',
       city: 'Zagreb',
       postalCode: '10000',
@@ -87,10 +116,10 @@ async function main() {
 
   const property2 = await prisma.property.upsert({
     where: { id: '00000000-0000-0000-0000-000000000002' },
-    update: {},
+    update: { customerAccountId: customerAccount.id },
     create: {
       id: '00000000-0000-0000-0000-000000000002',
-      customerId: customer.id,
+      customerAccountId: customerAccount.id,
       address: '456 Oak Avenue',
       city: 'Split',
       postalCode: '21000',
@@ -104,8 +133,11 @@ async function main() {
   console.log('✅ Property 2 created:', property2.address);
 
   // Create renovation for property 2
-  const renovation = await prisma.renovation.create({
-    data: {
+  const renovation = await prisma.renovation.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000010' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000010',
       propertyId: property2.id,
       title: 'Kitchen Renovation',
       description: 'Complete kitchen remodel with new appliances',
@@ -116,6 +148,11 @@ async function main() {
     },
   });
   console.log('✅ Renovation created:', renovation.title);
+
+  // Delete existing steps and recreate
+  await prisma.renovationStep.deleteMany({
+    where: { renovationId: renovation.id },
+  });
 
   // Create renovation steps
   const steps = await Promise.all([
@@ -168,6 +205,10 @@ async function main() {
   console.log('✅ Renovation steps created:', steps.length);
 
   // Create sample notifications
+  await prisma.notification.deleteMany({
+    where: { userId: { in: [customer.id, customer2.id] } },
+  });
+
   await prisma.notification.createMany({
     data: [
       {
@@ -183,11 +224,26 @@ async function main() {
         type: 'RENOVATION_UPDATE',
         metadata: { propertyId: property2.id, renovationId: renovation.id },
       },
+      {
+        userId: customer2.id,
+        title: 'Welcome to Od Sifra!',
+        body: 'You have been added to the Smith Family account.',
+        type: 'SYSTEM',
+      },
     ],
   });
   console.log('✅ Sample notifications created');
 
   // Create sample messages
+  await prisma.message.deleteMany({
+    where: {
+      OR: [
+        { senderId: { in: [employee.id, customer.id] } },
+        { receiverId: { in: [employee.id, customer.id] } },
+      ],
+    },
+  });
+
   await prisma.message.createMany({
     data: [
       {
@@ -213,7 +269,10 @@ async function main() {
   console.log('\n📋 Test credentials:');
   console.log('   Admin: admin@odsifra.com / admin123');
   console.log('   Employee: employee@odsifra.com / employee123');
-  console.log('   Customer: customer@odsifra.com / customer123');
+  console.log('   Customer (Jane): customer@odsifra.com / customer123');
+  console.log('   Customer (John): john@odsifra.com / customer123');
+  console.log('\n   Note: Both Jane and John share the same "Smith Family" account');
+  console.log('   and can see the same properties.');
 }
 
 main()
