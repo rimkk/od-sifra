@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -23,13 +23,17 @@ interface CustomerAccount {
 
 export default function NewPropertyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customerAccounts, setCustomerAccounts] = useState<CustomerAccount[]>([]);
 
+  // Pre-select account from URL if provided
+  const preselectedAccountId = searchParams.get('accountId') || '';
+
   // Form state
-  const [customerAccountId, setCustomerAccountId] = useState('');
+  const [customerAccountId, setCustomerAccountId] = useState(preselectedAccountId);
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');

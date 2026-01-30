@@ -15,9 +15,12 @@ import {
   Circle,
   Edit,
   Trash2,
+  Plus,
+  ChevronRight,
+  MoreVertical,
 } from 'lucide-react';
-import { Card, Badge, Button } from '@/components/ui';
-import { propertyApi } from '@/lib/api';
+import { Card, Badge, Button, Input } from '@/components/ui';
+import { propertyApi, renovationApi } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth';
 
@@ -36,10 +39,11 @@ interface Property {
   rentalStart?: string;
   rentalEnd?: string;
   status: string;
-  customer: { id: string; name: string; email: string };
+  customerAccount?: { id: string; name: string };
   renovations: {
     id: string;
     title: string;
+    description?: string;
     status: string;
     budget?: number;
     startDate?: string;
@@ -61,6 +65,21 @@ export default function PropertyDetailPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+
+  // Renovation modal state
+  const [showAddRenovation, setShowAddRenovation] = useState(false);
+  const [renovationTitle, setRenovationTitle] = useState('');
+  const [renovationDescription, setRenovationDescription] = useState('');
+  const [renovationBudget, setRenovationBudget] = useState('');
+  const [renovationStartDate, setRenovationStartDate] = useState('');
+  const [renovationEndDate, setRenovationEndDate] = useState('');
+  const [savingRenovation, setSavingRenovation] = useState(false);
+
+  // Step modal state
+  const [addingStepTo, setAddingStepTo] = useState<string | null>(null);
+  const [stepTitle, setStepTitle] = useState('');
+  const [stepDueDate, setStepDueDate] = useState('');
+  const [savingStep, setSavingStep] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   const isEmployee = user?.role === 'EMPLOYEE';
@@ -95,6 +114,74 @@ export default function PropertyDetailPage() {
       alert(error.response?.data?.error || 'Failed to delete property');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleAddRenovation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!renovationTitle.trim()) return;
+
+    setSavingRenovation(true);
+    try {
+      await renovationApi.create({
+        propertyId: id,
+        title: renovationTitle.trim(),
+        description: renovationDescription.trim() || undefined,
+        budget: renovationBudget ? parseFloat(renovationBudget) : undefined,
+        startDate: renovationStartDate || undefined,
+        endDate: renovationEndDate || undefined,
+      });
+      setShowAddRenovation(false);
+      setRenovationTitle('');
+      setRenovationDescription('');
+      setRenovationBudget('');
+      setRenovationStartDate('');
+      setRenovationEndDate('');
+      fetchProperty();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to add renovation');
+    } finally {
+      setSavingRenovation(false);
+    }
+  };
+
+  const handleAddStep = async (renovationId: string) => {
+    if (!stepTitle.trim()) return;
+
+    setSavingStep(true);
+    try {
+      await renovationApi.addStep(renovationId, {
+        title: stepTitle.trim(),
+        dueDate: stepDueDate || undefined,
+      });
+      setAddingStepTo(null);
+      setStepTitle('');
+      setStepDueDate('');
+      fetchProperty();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to add step');
+    } finally {
+      setSavingStep(false);
+    }
+  };
+
+  const handleToggleStep = async (stepId: string, currentStatus: string) => {
+    try {
+      await renovationApi.updateStep(stepId, {
+        status: currentStatus === 'COMPLETED' ? 'PENDING' : 'COMPLETED',
+      });
+      fetchProperty();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to update step');
+    }
+  };
+
+  const handleUpdateRenovationStatus = async (renovationId: string, status: string) => {
+    try {
+      await renovationApi.update(renovationId, { status });
+      fetchProperty();
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to update renovation');
     }
   };
 
@@ -198,6 +285,27 @@ export default function PropertyDetailPage() {
         </div>
       </div>
 
+      {/* Customer Account Info */}
+      {property.customerAccount && (
+        <Card variant="outlined">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="text-secondary" size={24} />
+              <div>
+                <p className="text-sm text-[var(--text-secondary)]">Assigned to Customer</p>
+                <Link
+                  href={`/dashboard/customers/${property.customerAccount.id}`}
+                  className="text-lg font-semibold text-[var(--text)] hover:text-secondary flex items-center gap-1"
+                >
+                  {property.customerAccount.name}
+                  <ChevronRight size={18} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Financial Card */}
       <Card variant="elevated">
         <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Financial Details</h2>
@@ -254,11 +362,93 @@ export default function PropertyDetailPage() {
 
       {/* Renovations */}
       <div>
-        <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Renovations</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-[var(--text)]">Renovations</h2>
+          {canEdit && (
+            <Button variant="outline" size="sm" onClick={() => setShowAddRenovation(true)}>
+              <Plus size={16} className="mr-2" />
+              Add Renovation
+            </Button>
+          )}
+        </div>
+
+        {/* Add Renovation Modal */}
+        {showAddRenovation && (
+          <Card variant="outlined" className="mb-4">
+            <form onSubmit={handleAddRenovation} className="space-y-4">
+              <h3 className="font-semibold text-[var(--text)]">New Renovation</h3>
+              <Input
+                label="Title"
+                value={renovationTitle}
+                onChange={(e) => setRenovationTitle(e.target.value)}
+                placeholder="Kitchen Remodel"
+                required
+              />
+              <div>
+                <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={renovationDescription}
+                  onChange={(e) => setRenovationDescription(e.target.value)}
+                  placeholder="Renovation details..."
+                  rows={2}
+                  className="w-full px-4 py-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <Input
+                  label="Budget (€)"
+                  type="number"
+                  value={renovationBudget}
+                  onChange={(e) => setRenovationBudget(e.target.value)}
+                  placeholder="10000"
+                  min="0"
+                />
+                <Input
+                  label="Start Date"
+                  type="date"
+                  value={renovationStartDate}
+                  onChange={(e) => setRenovationStartDate(e.target.value)}
+                />
+                <Input
+                  label="End Date"
+                  type="date"
+                  value={renovationEndDate}
+                  onChange={(e) => setRenovationEndDate(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" loading={savingRenovation}>
+                  Add Renovation
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setShowAddRenovation(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
+
         {property.renovations.length === 0 ? (
           <Card variant="outlined" className="text-center py-8">
             <Hammer className="mx-auto text-[var(--text-tertiary)] mb-2" size={32} />
             <p className="text-[var(--text-secondary)]">No renovations for this property</p>
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setShowAddRenovation(true)}
+              >
+                <Plus size={16} className="mr-2" />
+                Add First Renovation
+              </Button>
+            )}
           </Card>
         ) : (
           <div className="space-y-4">
@@ -274,13 +464,29 @@ export default function PropertyDetailPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="font-semibold text-[var(--text)]">{renovation.title}</h3>
+                      {renovation.description && (
+                        <p className="text-sm text-[var(--text-secondary)]">{renovation.description}</p>
+                      )}
                       {renovation.budget && (
                         <p className="text-sm text-[var(--text-secondary)]">
                           Budget: {formatCurrency(Number(renovation.budget))}
                         </p>
                       )}
                     </div>
-                    {getRenovationStatusBadge(renovation.status)}
+                    <div className="flex items-center gap-2">
+                      {getRenovationStatusBadge(renovation.status)}
+                      {canEdit && (
+                        <select
+                          value={renovation.status}
+                          onChange={(e) => handleUpdateRenovationStatus(renovation.id, e.target.value)}
+                          className="text-sm px-2 py-1 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]"
+                        >
+                          <option value="PLANNED">Planned</option>
+                          <option value="IN_PROGRESS">In Progress</option>
+                          <option value="COMPLETED">Completed</option>
+                        </select>
+                      )}
+                    </div>
                   </div>
 
                   {/* Progress Bar */}
@@ -302,32 +508,81 @@ export default function PropertyDetailPage() {
                   )}
 
                   {/* Steps */}
-                  {renovation.steps.length > 0 && (
-                    <div className="space-y-2">
-                      {renovation.steps.map((step) => (
-                        <div
-                          key={step.id}
-                          className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--surface-secondary)]"
+                  <div className="space-y-2">
+                    {renovation.steps.map((step) => (
+                      <div
+                        key={step.id}
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-[var(--surface-secondary)]"
+                      >
+                        <button
+                          onClick={() => canEdit && handleToggleStep(step.id, step.status)}
+                          className={canEdit ? 'cursor-pointer' : 'cursor-default'}
                         >
                           {getStepIcon(step.status)}
-                          <span
-                            className={`flex-1 ${
-                              step.status === 'COMPLETED'
-                                ? 'text-[var(--text-secondary)] line-through'
-                                : 'text-[var(--text)]'
-                            }`}
-                          >
-                            {step.title}
+                        </button>
+                        <span
+                          className={`flex-1 ${
+                            step.status === 'COMPLETED'
+                              ? 'text-[var(--text-secondary)] line-through'
+                              : 'text-[var(--text)]'
+                          }`}
+                        >
+                          {step.title}
+                        </span>
+                        {step.dueDate && step.status !== 'COMPLETED' && (
+                          <span className="text-xs text-[var(--text-tertiary)]">
+                            Due: {formatDate(step.dueDate)}
                           </span>
-                          {step.dueDate && step.status !== 'COMPLETED' && (
-                            <span className="text-xs text-[var(--text-tertiary)]">
-                              Due: {formatDate(step.dueDate)}
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Add Step Form */}
+                    {addingStepTo === renovation.id ? (
+                      <div className="flex gap-2 p-2">
+                        <Input
+                          placeholder="Step title..."
+                          value={stepTitle}
+                          onChange={(e) => setStepTitle(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Input
+                          type="date"
+                          value={stepDueDate}
+                          onChange={(e) => setStepDueDate(e.target.value)}
+                          className="w-40"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddStep(renovation.id)}
+                          loading={savingStep}
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setAddingStepTo(null);
+                            setStepTitle('');
+                            setStepDueDate('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      canEdit && (
+                        <button
+                          onClick={() => setAddingStepTo(renovation.id)}
+                          className="flex items-center gap-2 p-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
+                        >
+                          <Plus size={16} />
+                          Add Step
+                        </button>
+                      )
+                    )}
+                  </div>
 
                   {/* Dates */}
                   {(renovation.startDate || renovation.endDate) && (
