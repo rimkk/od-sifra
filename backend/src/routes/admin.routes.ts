@@ -7,9 +7,9 @@ import { UserRole } from '@prisma/client';
 
 const router = Router();
 
-// All routes require admin authentication
+// All routes require admin or employee authentication
 router.use(authenticate);
-router.use(authorize(UserRole.ADMIN));
+router.use(authorize([UserRole.ADMIN, UserRole.EMPLOYEE]));
 
 // Get dashboard overview
 router.get('/overview', async (req: AuthRequest, res: Response) => {

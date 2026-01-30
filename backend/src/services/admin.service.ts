@@ -4,25 +4,33 @@ import { UserRole } from '@prisma/client';
 export const adminService = {
   async getDashboardOverview() {
     const [
-      totalCustomers,
+      totalCustomerAccounts,
+      totalCustomerUsers,
       totalEmployees,
       totalProperties,
       activeProperties,
-      recentCustomers,
+      recentAccounts,
     ] = await Promise.all([
+      prisma.customerAccount.count(),
       prisma.user.count({ where: { role: UserRole.CUSTOMER } }),
       prisma.user.count({ where: { role: UserRole.EMPLOYEE } }),
       prisma.property.count(),
       prisma.property.count({ where: { status: 'ACTIVE' } }),
-      prisma.user.findMany({
-        where: { role: UserRole.CUSTOMER },
+      prisma.customerAccount.findMany({
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: {
           id: true,
           name: true,
-          email: true,
           createdAt: true,
+          users: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+            take: 2,
+          },
         },
       }),
     ]);
@@ -36,41 +44,52 @@ export const adminService = {
     const totalMonthlyRent = Number(rentData._sum.monthlyRent) || 0;
 
     return {
-      totalCustomers,
+      totalCustomers: totalCustomerAccounts,
+      totalCustomerUsers,
       totalEmployees,
       totalProperties,
       activeProperties,
       vacantProperties: totalProperties - activeProperties,
       totalMonthlyRent,
       estimatedAnnualRevenue: totalMonthlyRent * 12,
-      recentCustomers,
+      recentCustomers: recentAccounts.map(account => ({
+        id: account.id,
+        name: account.name,
+        email: account.users[0]?.email || 'No users',
+        createdAt: account.createdAt,
+        userCount: account.users.length,
+      })),
     };
   },
 
   async getAllCustomers(page: number = 1, limit: number = 20) {
     const skip = (page - 1) * limit;
 
-    const [customers, total] = await Promise.all([
-      prisma.user.findMany({
-        where: { role: UserRole.CUSTOMER },
+    const [accounts, total] = await Promise.all([
+      prisma.customerAccount.findMany({
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          phone: true,
-          isActive: true,
-          createdAt: true,
-          lastLoginAt: true,
-          invitedBy: {
+        include: {
+          users: {
             select: {
               id: true,
               name: true,
+              email: true,
+              phone: true,
+              isActive: true,
+              createdAt: true,
+              lastLoginAt: true,
             },
           },
-          assignedEmployee: {
+          properties: {
+            select: {
+              id: true,
+              monthlyRent: true,
+              status: true,
+            },
+          },
+          assignments: {
             include: {
               employee: {
                 select: {
@@ -81,37 +100,30 @@ export const adminService = {
               },
             },
           },
-          properties: {
-            select: {
-              id: true,
-              monthlyRent: true,
-              status: true,
-            },
-          },
         },
       }),
-      prisma.user.count({ where: { role: UserRole.CUSTOMER } }),
+      prisma.customerAccount.count(),
     ]);
 
-    // Calculate stats for each customer
-    const customersWithStats = customers.map((customer) => {
-      const activeProperties = customer.properties.filter((p) => p.status === 'ACTIVE');
+    // Calculate stats for each customer account
+    const customersWithStats = accounts.map((account) => {
+      const activeProperties = account.properties.filter((p) => p.status === 'ACTIVE');
       const totalRent = activeProperties.reduce((sum, p) => sum + Number(p.monthlyRent), 0);
       const daysSinceOnboarding = Math.floor(
-        (Date.now() - customer.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        (Date.now() - account.createdAt.getTime()) / (1000 * 60 * 60 * 24)
       );
 
       return {
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
-        phone: customer.phone,
-        isActive: customer.isActive,
-        createdAt: customer.createdAt,
-        lastLoginAt: customer.lastLoginAt,
-        invitedBy: customer.invitedBy,
-        assignedEmployee: customer.assignedEmployee?.employee || null,
-        totalProperties: customer.properties.length,
+        id: account.id,
+        name: account.name,
+        email: account.users[0]?.email || 'No users',
+        phone: account.users[0]?.phone,
+        isActive: account.isActive,
+        createdAt: account.createdAt,
+        lastLoginAt: account.users[0]?.lastLoginAt,
+        users: account.users,
+        assignedEmployee: account.assignments[0]?.employee || null,
+        totalProperties: account.properties.length,
         activeProperties: activeProperties.length,
         totalMonthlyRent: totalRent,
         daysSinceOnboarding,
@@ -146,9 +158,9 @@ export const adminService = {
           isActive: true,
           createdAt: true,
           lastLoginAt: true,
-          assignedCustomers: {
+          assignedAccounts: {
             include: {
-              customer: {
+              customerAccount: {
                 select: {
                   id: true,
                   name: true,
@@ -163,8 +175,8 @@ export const adminService = {
 
     const employeesWithStats = employees.map((emp) => ({
       ...emp,
-      totalCustomers: emp.assignedCustomers.length,
-      customers: emp.assignedCustomers.map((a) => a.customer),
+      totalCustomers: emp.assignedAccounts.length,
+      customers: emp.assignedAccounts.map((a) => a.customerAccount),
     }));
 
     return {
@@ -179,9 +191,21 @@ export const adminService = {
   },
 
   async getCustomerDetails(customerId: string) {
-    const customer = await prisma.user.findUnique({
-      where: { id: customerId, role: UserRole.CUSTOMER },
+    // Try to find as CustomerAccount first
+    const account = await prisma.customerAccount.findUnique({
+      where: { id: customerId },
       include: {
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            isActive: true,
+            createdAt: true,
+            lastLoginAt: true,
+          },
+        },
         properties: {
           include: {
             renovations: {
@@ -191,14 +215,7 @@ export const adminService = {
             },
           },
         },
-        invitedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        assignedEmployee: {
+        assignments: {
           include: {
             employee: {
               select: {
@@ -212,24 +229,31 @@ export const adminService = {
       },
     });
 
-    if (!customer) {
+    if (!account) {
       return null;
     }
 
-    const totalPurchaseCost = customer.properties.reduce(
+    const totalPurchaseCost = account.properties.reduce(
       (sum, p) => sum + Number(p.purchaseCost),
       0
     );
-    const activeProperties = customer.properties.filter((p) => p.status === 'ACTIVE');
+    const activeProperties = account.properties.filter((p) => p.status === 'ACTIVE');
     const totalMonthlyRent = activeProperties.reduce(
       (sum, p) => sum + Number(p.monthlyRent),
       0
     );
 
     return {
-      ...customer,
+      id: account.id,
+      name: account.name,
+      description: account.description,
+      isActive: account.isActive,
+      createdAt: account.createdAt,
+      users: account.users,
+      properties: account.properties,
+      assignedEmployee: account.assignments[0]?.employee || null,
       stats: {
-        totalProperties: customer.properties.length,
+        totalProperties: account.properties.length,
         activeProperties: activeProperties.length,
         totalPurchaseCost,
         totalMonthlyRent,
@@ -238,15 +262,15 @@ export const adminService = {
     };
   },
 
-  async assignCustomerToEmployee(customerId: string, employeeId: string) {
-    // Verify both users exist and have correct roles
-    const [customer, employee] = await Promise.all([
-      prisma.user.findUnique({ where: { id: customerId } }),
+  async assignCustomerToEmployee(customerAccountId: string, employeeId: string) {
+    // Verify account and employee exist
+    const [account, employee] = await Promise.all([
+      prisma.customerAccount.findUnique({ where: { id: customerAccountId } }),
       prisma.user.findUnique({ where: { id: employeeId } }),
     ]);
 
-    if (!customer || customer.role !== UserRole.CUSTOMER) {
-      throw new Error('Customer not found');
+    if (!account) {
+      throw new Error('Customer account not found');
     }
 
     if (!employee || employee.role !== UserRole.EMPLOYEE) {
@@ -255,9 +279,9 @@ export const adminService = {
 
     // Upsert assignment
     return prisma.customerAssignment.upsert({
-      where: { customerId },
+      where: { customerAccountId },
       update: { employeeId },
-      create: { customerId, employeeId },
+      create: { customerAccountId, employeeId },
     });
   },
 
@@ -277,6 +301,21 @@ export const adminService = {
     return prisma.user.update({
       where: { id: userId },
       data: { isActive: !user.isActive },
+    });
+  },
+
+  async toggleAccountStatus(accountId: string) {
+    const account = await prisma.customerAccount.findUnique({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      throw new Error('Account not found');
+    }
+
+    return prisma.customerAccount.update({
+      where: { id: accountId },
+      data: { isActive: !account.isActive },
     });
   },
 };
