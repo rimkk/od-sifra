@@ -1,0 +1,14 @@
+{
+  "name": "od-sifra-shared",
+  "version": "1.0.0",
+  "description": "Shared types for Od Sifra",
+  "main": "types/index.js",
+  "types": "types/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf types/*.js types/*.d.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

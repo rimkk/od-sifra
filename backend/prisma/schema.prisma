@@ -1,0 +1,248 @@
+// Prisma schema for Od Sifra Property Management App
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles enum
+enum UserRole {
+  ADMIN
+  EMPLOYEE
+  CUSTOMER
+}
+
+// Property status enum
+enum PropertyStatus {
+  ACTIVE
+  VACANT
+  RENOVATION
+  SOLD
+}
+
+// Renovation status enum
+enum RenovationStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Notification type enum
+enum NotificationType {
+  STATUS_CHANGE
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  MESSAGE
+  RENOVATION_UPDATE
+  SYSTEM
+}
+
+// User model
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  phone         String?
+  role          UserRole @default(CUSTOMER)
+  avatarUrl     String?  @map("avatar_url")
+  isActive      Boolean  @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  invitedById       String?   @map("invited_by_id")
+  invitedBy         User?     @relation("UserInvitations", fields: [invitedById], references: [id])
+  invitedUsers      User[]    @relation("UserInvitations")
+  
+  properties        Property[]
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
+  notifications     Notification[]
+  createdInvitations Invitation[]
+  pushTokens        PushToken[]
+  
+  // Employee-Customer assignments
+  assignedCustomers  CustomerAssignment[] @relation("EmployeeAssignments")
+  assignedEmployee   CustomerAssignment?  @relation("CustomerAssignments")
+
+  @@map("users")
+}
+
+// Customer to Employee assignment
+model CustomerAssignment {
+  id          String   @id @default(uuid())
+  customerId  String   @unique @map("customer_id")
+  employeeId  String   @map("employee_id")
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+
+  customer    User     @relation("CustomerAssignments", fields: [customerId], references: [id], onDelete: Cascade)
+  employee    User     @relation("EmployeeAssignments", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("customer_assignments")
+}
+
+// Property model
+model Property {
+  id            String         @id @default(uuid())
+  customerId    String         @map("customer_id")
+  address       String
+  city          String
+  postalCode    String?        @map("postal_code")
+  country       String         @default("Croatia")
+  description   String?
+  purchaseCost  Decimal        @map("purchase_cost") @db.Decimal(12, 2)
+  monthlyRent   Decimal        @map("monthly_rent") @db.Decimal(10, 2)
+  tenantName    String?        @map("tenant_name")
+  tenantEmail   String?        @map("tenant_email")
+  tenantPhone   String?        @map("tenant_phone")
+  rentalStart   DateTime?      @map("rental_start")
+  rentalEnd     DateTime?      @map("rental_end")
+  status        PropertyStatus @default(VACANT)
+  imageUrl      String?        @map("image_url")
+  notes         String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  customer      User           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  renovations   Renovation[]
+  visits        Visit[]
+
+  @@map("properties")
+}
+
+// Renovation model
+model Renovation {
+  id          String           @id @default(uuid())
+  propertyId  String           @map("property_id")
+  title       String
+  description String?
+  status      RenovationStatus @default(PLANNED)
+  budget      Decimal?         @db.Decimal(10, 2)
+  actualCost  Decimal?         @map("actual_cost") @db.Decimal(10, 2)
+  startDate   DateTime?        @map("start_date")
+  endDate     DateTime?        @map("end_date")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  property    Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  steps       RenovationStep[]
+
+  @@map("renovations")
+}
+
+// Renovation step model
+model RenovationStep {
+  id            String           @id @default(uuid())
+  renovationId  String           @map("renovation_id")
+  title         String
+  description   String?
+  status        RenovationStatus @default(PLANNED)
+  orderIndex    Int              @default(0) @map("order_index")
+  dueDate       DateTime?        @map("due_date")
+  completedAt   DateTime?        @map("completed_at")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  renovation    Renovation       @relation(fields: [renovationId], references: [id], onDelete: Cascade)
+
+  @@map("renovation_steps")
+}
+
+// Visit model (for property visits/inspections)
+model Visit {
+  id          String    @id @default(uuid())
+  propertyId  String    @map("property_id")
+  title       String
+  description String?
+  scheduledAt DateTime  @map("scheduled_at")
+  completedAt DateTime? @map("completed_at")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("visits")
+}
+
+// Message model
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String   @map("sender_id")
+  receiverId  String   @map("receiver_id")
+  content     String
+  isRead      Boolean  @default(false) @map("is_read")
+  readAt      DateTime? @map("read_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, isRead])
+  @@map("messages")
+}
+
+// Notification model
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  title     String
+  body      String
+  type      NotificationType
+  metadata  Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// Invitation model
+model Invitation {
+  id          String   @id @default(uuid())
+  inviterId   String   @map("inviter_id")
+  email       String
+  role        UserRole
+  token       String   @unique
+  expiresAt   DateTime @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  inviter     User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([email])
+  @@map("invitations")
+}
+
+// Push notification tokens
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  platform  String   // ios, android
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_tokens")
+}

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: p1-flylnp1.jfrogdev.org/docker/postgres:16-alpine
+    container_name: od-sifra-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-odsifra}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-odsifra123}
+      POSTGRES_DB: ${DB_NAME:-od_sifra}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-odsifra} -d ${DB_NAME:-od_sifra}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: od-sifra-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-odsifra}:${DB_PASSWORD:-odsifra123}@postgres:5432/${DB_NAME:-od_sifra}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Web Frontend
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: od-sifra-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:3000/api
+      NEXT_PUBLIC_SOCKET_URL: http://backend:3000
+    ports:
+      - "3001:3001"
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: od-sifra-network

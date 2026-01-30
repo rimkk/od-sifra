@@ -1,0 +1,30 @@
+{
+  "name": "od-sifra",
+  "version": "1.0.0",
+  "description": "Property Management and Project Tracking App",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "mobile",
+    "web",
+    "shared"
+  ],
+  "scripts": {
+    "backend": "npm run dev --workspace=backend",
+    "mobile": "npm run start --workspace=mobile",
+    "web": "npm run dev --workspace=web",
+    "backend:build": "npm run build --workspace=backend",
+    "web:build": "npm run build --workspace=web",
+    "db:migrate": "npm run db:migrate --workspace=backend",
+    "db:seed": "npm run db:seed --workspace=backend",
+    "install:all": "npm install"
+  },
+  "keywords": [
+    "property-management",
+    "react-native",
+    "nodejs",
+    "typescript"
+  ],
+  "author": "Od Sifra",
+  "license": "MIT"
+}
