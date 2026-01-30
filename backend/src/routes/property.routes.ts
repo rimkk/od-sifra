@@ -51,7 +51,7 @@ router.post(
   authenticate,
   authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   validate([
-    body('customerId').isUUID().withMessage('Valid customer ID required'),
+    body('customerAccountId').isUUID().withMessage('Valid customer account ID required'),
     body('address').trim().notEmpty().withMessage('Address is required'),
     body('city').trim().notEmpty().withMessage('City is required'),
     body('purchaseCost').isFloat({ min: 0 }).withMessage('Valid purchase cost required'),

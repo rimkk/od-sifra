@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Building2, DollarSign, Users, Search, Hammer } from 'lucide-react';
-import { Card, Badge, Input } from '@/components/ui';
+import { Building2, DollarSign, Users, Search, Hammer, Plus } from 'lucide-react';
+import { Card, Badge, Input, Button } from '@/components/ui';
 import { propertyApi } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth';
 
 interface Property {
   id: string;
@@ -19,9 +20,14 @@ interface Property {
 }
 
 export default function PropertiesPage() {
+  const { user } = useAuthStore();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+
+  const isAdmin = user?.role === 'ADMIN';
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const canAddProperty = isAdmin || isEmployee;
 
   useEffect(() => {
     fetchProperties();
@@ -69,7 +75,17 @@ export default function PropertiesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[var(--text)]">Properties</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-[var(--text)]">Properties</h1>
+        {canAddProperty && (
+          <Link href="/dashboard/properties/new">
+            <Button>
+              <Plus size={18} className="mr-2" />
+              Add Property
+            </Button>
+          </Link>
+        )}
+      </div>
 
       {/* Search */}
       <div className="max-w-md">

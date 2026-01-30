@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -13,10 +13,13 @@ import {
   CheckCircle,
   Clock,
   Circle,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { Card, Badge, Button } from '@/components/ui';
 import { propertyApi } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useAuthStore } from '@/store/auth';
 
 interface Property {
   id: string;
@@ -53,8 +56,16 @@ interface Property {
 
 export default function PropertyDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
+  const { user } = useAuthStore();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = user?.role === 'ADMIN';
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const canEdit = isAdmin || isEmployee;
+  const canDelete = isAdmin;
 
   useEffect(() => {
     fetchProperty();
@@ -68,6 +79,22 @@ export default function PropertyDetailPage() {
       console.error('Failed to fetch property:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await propertyApi.delete(id as string);
+      router.push('/dashboard/properties');
+    } catch (error: any) {
+      alert(error.response?.data?.error || 'Failed to delete property');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -146,7 +173,29 @@ export default function PropertyDetailPage() {
             {property.city}, {property.postalCode} {property.country}
           </p>
         </div>
-        {getStatusBadge(property.status)}
+        <div className="flex items-center gap-3">
+          {getStatusBadge(property.status)}
+          {canEdit && (
+            <Link href={`/dashboard/properties/${id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Edit size={16} className="mr-2" />
+                Edit
+              </Button>
+            </Link>
+          )}
+          {canDelete && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              loading={deleting}
+              className="text-[var(--error)] border-[var(--error)] hover:bg-[var(--error-bg)]"
+            >
+              <Trash2 size={16} className="mr-2" />
+              Delete
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Financial Card */}
