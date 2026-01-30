@@ -8,7 +8,7 @@ import { userApi } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 
 export default function ProfilePage() {
-  const { user, setUser } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [success, setSuccess] = useState('');
@@ -31,7 +31,7 @@ export default function ProfilePage() {
 
     try {
       const response = await userApi.updateProfile({ name, phone });
-      setUser(response.data.user);
+      updateUser(response.data.user);
       setSuccess('Profile updated successfully');
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to update profile');
@@ -94,7 +94,9 @@ export default function ProfilePage() {
           <div>
             <h2 className="text-xl font-semibold text-[var(--text)]">{user?.name}</h2>
             <p className="text-[var(--text-secondary)]">{user?.email}</p>
-            <Badge text={roleLabel(user?.role || '')} variant="info" className="mt-2" />
+            <div className="mt-2">
+              <Badge text={roleLabel(user?.role || '')} variant="info" />
+            </div>
           </div>
         </div>
 

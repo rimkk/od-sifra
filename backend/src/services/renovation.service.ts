@@ -20,12 +20,38 @@ export interface CreateStepData {
   orderIndex?: number;
 }
 
+// Helper to notify all users in a customer account
+async function notifyCustomerAccountUsers(
+  customerAccountId: string,
+  title: string,
+  body: string,
+  type: 'STATUS_CHANGE' | 'RENOVATION_UPDATE',
+  metadata: Record<string, any>
+) {
+  const users = await prisma.user.findMany({
+    where: { customerAccountId },
+    select: { id: true },
+  });
+
+  await Promise.all(
+    users.map((user) =>
+      notificationService.createNotification({
+        userId: user.id,
+        title,
+        body,
+        type,
+        metadata,
+      })
+    )
+  );
+}
+
 export const renovationService = {
   async createRenovation(data: CreateRenovationData, userId: string, userRole: UserRole) {
     // Verify property exists and user has access
     const property = await prisma.property.findUnique({
       where: { id: data.propertyId },
-      include: { customer: true },
+      include: { customerAccount: true },
     });
 
     if (!property) {
@@ -36,7 +62,7 @@ export const renovationService = {
     if (userRole === UserRole.EMPLOYEE) {
       const assignment = await prisma.customerAssignment.findFirst({
         where: {
-          customerId: property.customerId,
+          customerAccountId: property.customerAccountId,
           employeeId: userId,
         },
       });
@@ -60,20 +86,20 @@ export const renovationService = {
         property: {
           select: {
             address: true,
-            customerId: true,
+            customerAccountId: true,
           },
         },
       },
     });
 
-    // Notify customer
-    await notificationService.createNotification({
-      userId: property.customerId,
-      title: 'New Renovation Added',
-      body: `A new renovation "${data.title}" has been added to ${property.address}`,
-      type: 'RENOVATION_UPDATE',
-      metadata: { renovationId: renovation.id, propertyId: property.id },
-    });
+    // Notify all users in the customer account
+    await notifyCustomerAccountUsers(
+      property.customerAccountId,
+      'New Renovation Added',
+      `A new renovation "${data.title}" has been added to ${property.address}`,
+      'RENOVATION_UPDATE',
+      { renovationId: renovation.id, propertyId: property.id }
+    );
 
     return renovation;
   },
@@ -87,7 +113,7 @@ export const renovationService = {
         },
         property: {
           include: {
-            customer: {
+            customerAccount: {
               select: {
                 id: true,
                 name: true,
@@ -102,9 +128,16 @@ export const renovationService = {
       throw new AppError('Renovation not found', 404);
     }
 
-    // Check access
-    if (userRole === UserRole.CUSTOMER && renovation.property.customerId !== userId) {
-      throw new AppError('Not authorized to view this renovation', 403);
+    // Check access for customer
+    if (userRole === UserRole.CUSTOMER) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { customerAccountId: true },
+      });
+
+      if (!user?.customerAccountId || renovation.property.customerAccountId !== user.customerAccountId) {
+        throw new AppError('Not authorized to view this renovation', 403);
+      }
     }
 
     return renovation;
@@ -133,7 +166,7 @@ export const renovationService = {
     if (userRole === UserRole.EMPLOYEE) {
       const assignment = await prisma.customerAssignment.findFirst({
         where: {
-          customerId: renovation.property.customerId,
+          customerAccountId: renovation.property.customerAccountId,
           employeeId: userId,
         },
       });
@@ -162,21 +195,21 @@ export const renovationService = {
         property: {
           select: {
             address: true,
-            customerId: true,
+            customerAccountId: true,
           },
         },
       },
     });
 
-    // Notify customer of status change
+    // Notify customer account users of status change
     if (data.status && data.status !== renovation.status) {
-      await notificationService.createNotification({
-        userId: renovation.property.customerId,
-        title: 'Renovation Status Updated',
-        body: `Renovation "${renovation.title}" is now ${data.status.toLowerCase().replace('_', ' ')}`,
-        type: 'STATUS_CHANGE',
-        metadata: { renovationId, status: data.status },
-      });
+      await notifyCustomerAccountUsers(
+        renovation.property.customerAccountId,
+        'Renovation Status Updated',
+        `Renovation "${renovation.title}" is now ${data.status.toLowerCase().replace('_', ' ')}`,
+        'STATUS_CHANGE',
+        { renovationId, status: data.status }
+      );
     }
 
     return updated;
@@ -246,15 +279,15 @@ export const renovationService = {
       data: updateData,
     });
 
-    // Notify customer
+    // Notify customer account users
     if (data.status && data.status !== step.status) {
-      await notificationService.createNotification({
-        userId: step.renovation.property.customerId,
-        title: 'Renovation Step Updated',
-        body: `Step "${step.title}" is now ${data.status.toLowerCase().replace('_', ' ')}`,
-        type: 'RENOVATION_UPDATE',
-        metadata: { stepId, renovationId: step.renovationId },
-      });
+      await notifyCustomerAccountUsers(
+        step.renovation.property.customerAccountId,
+        'Renovation Step Updated',
+        `Step "${step.title}" is now ${data.status.toLowerCase().replace('_', ' ')}`,
+        'RENOVATION_UPDATE',
+        { stepId, renovationId: step.renovationId }
+      );
     }
 
     return updated;

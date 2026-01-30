@@ -33,9 +33,9 @@ export const messageService = {
     // Admin can message anyone
     // Employee can message customers (and admin)
     // Customer can message their assigned employee (and admin)
-    if (sender.role === UserRole.CUSTOMER) {
+    if (sender.role === UserRole.CUSTOMER && sender.customerAccountId) {
       const assignment = await prisma.customerAssignment.findUnique({
-        where: { customerId: senderId },
+        where: { customerAccountId: sender.customerAccountId },
       });
 
       if (

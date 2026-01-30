@@ -1,6 +1,7 @@
-import { Router } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { body, param } from 'express-validator';
-import { authenticate, authorize } from '../middleware/auth';
+import { UserRole } from '@prisma/client';
+import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { customerAccountsService } from '../services/customerAccounts';
 
@@ -12,7 +13,7 @@ router.use(authenticate);
 // Create a new customer account (Admin/Employee only)
 router.post(
   '/',
-  authorize(['ADMIN', 'EMPLOYEE']),
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   [
     body('accountName').notEmpty().withMessage('Account name is required'),
     body('description').optional().isString(),
@@ -23,7 +24,7 @@ router.post(
     body('primaryUser.phone').optional().isString(),
   ],
   validate,
-  async (req, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const result = await customerAccountsService.createAccount(req.body, req.user!.id);
       res.status(201).json({
@@ -42,8 +43,8 @@ router.post(
 // Get all customer accounts (Admin/Employee only)
 router.get(
   '/',
-  authorize(['ADMIN', 'EMPLOYEE']),
-  async (req, res, next) => {
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const accounts = await customerAccountsService.getAllAccounts();
       res.json({ accounts });
@@ -56,10 +57,10 @@ router.get(
 // Get a single customer account
 router.get(
   '/:id',
-  authorize(['ADMIN', 'EMPLOYEE']),
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   [param('id').isUUID().withMessage('Valid account ID required')],
   validate,
-  async (req, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const account = await customerAccountsService.getAccountById(req.params.id);
       if (!account) {
@@ -75,7 +76,7 @@ router.get(
 // Update a customer account
 router.patch(
   '/:id',
-  authorize(['ADMIN', 'EMPLOYEE']),
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   [
     param('id').isUUID().withMessage('Valid account ID required'),
     body('name').optional().notEmpty().withMessage('Name cannot be empty'),
@@ -83,7 +84,7 @@ router.patch(
     body('isActive').optional().isBoolean(),
   ],
   validate,
-  async (req, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const account = await customerAccountsService.updateAccount(req.params.id, req.body);
       res.json({ message: 'Account updated', account });
@@ -96,7 +97,7 @@ router.patch(
 // Add a user directly to an account (Admin/Employee only)
 router.post(
   '/:id/users',
-  authorize(['ADMIN', 'EMPLOYEE']),
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   [
     param('id').isUUID().withMessage('Valid account ID required'),
     body('email').isEmail().withMessage('Valid email required'),
@@ -105,7 +106,7 @@ router.post(
     body('phone').optional().isString(),
   ],
   validate,
-  async (req, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const user = await customerAccountsService.addUserToAccount(
         {
@@ -127,14 +128,14 @@ router.post(
 // Invite multiple users to an account (Admin/Employee only)
 router.post(
   '/:id/invite',
-  authorize(['ADMIN', 'EMPLOYEE']),
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   [
     param('id').isUUID().withMessage('Valid account ID required'),
     body('emails').isArray({ min: 1 }).withMessage('At least one email is required'),
     body('emails.*').isEmail().withMessage('All emails must be valid'),
   ],
   validate,
-  async (req, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const result = await customerAccountsService.inviteToAccount({
         customerAccountId: req.params.id,
@@ -165,13 +166,13 @@ router.post(
 // Remove a user from an account
 router.delete(
   '/:id/users/:userId',
-  authorize(['ADMIN', 'EMPLOYEE']),
+  authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   [
     param('id').isUUID().withMessage('Valid account ID required'),
     param('userId').isUUID().withMessage('Valid user ID required'),
   ],
   validate,
-  async (req, res, next) => {
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       await customerAccountsService.removeUserFromAccount(req.params.userId);
       res.json({ message: 'User removed from account' });

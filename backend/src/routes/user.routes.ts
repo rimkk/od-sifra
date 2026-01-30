@@ -21,13 +21,20 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         avatarUrl: true,
         createdAt: true,
         lastLoginAt: true,
-        assignedEmployee: {
-          include: {
-            employee: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+        customerAccountId: true,
+        customerAccount: {
+          select: {
+            id: true,
+            name: true,
+            assignments: {
+              include: {
+                employee: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
               },
             },
           },
@@ -85,8 +92,8 @@ router.put(
   validate([
     body('currentPassword').notEmpty().withMessage('Current password required'),
     body('newPassword')
-      .isLength({ min: 8 })
-      .withMessage('New password must be at least 8 characters'),
+      .isLength({ min: 6 })
+      .withMessage('New password must be at least 6 characters'),
   ]),
   async (req: AuthRequest, res: Response) => {
     try {
@@ -170,17 +177,21 @@ router.get('/contacts', authenticate, async (req: AuthRequest, res: Response) =>
         },
       });
     } else if (user.role === 'EMPLOYEE') {
-      // Employee can message their assigned customers and admin
+      // Employee can message users from their assigned customer accounts and admin
       const assignments = await prisma.customerAssignment.findMany({
         where: { employeeId: user.id },
         include: {
-          customer: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              avatarUrl: true,
+          customerAccount: {
+            include: {
+              users: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  role: true,
+                  avatarUrl: true,
+                },
+              },
             },
           },
         },
@@ -197,24 +208,34 @@ router.get('/contacts', authenticate, async (req: AuthRequest, res: Response) =>
         },
       });
 
-      contacts = assignments.map((a) => a.customer);
+      // Flatten all users from assigned customer accounts
+      contacts = assignments.flatMap((a) => a.customerAccount.users);
       if (admin) contacts.unshift(admin);
     } else if (user.role === 'CUSTOMER') {
       // Customer can message their assigned employee and admin
-      const assignment = await prisma.customerAssignment.findUnique({
-        where: { customerId: user.id },
-        include: {
-          employee: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              avatarUrl: true,
+      const currentUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { customerAccountId: true },
+      });
+
+      if (currentUser?.customerAccountId) {
+        const assignment = await prisma.customerAssignment.findUnique({
+          where: { customerAccountId: currentUser.customerAccountId },
+          include: {
+            employee: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                avatarUrl: true,
+              },
             },
           },
-        },
-      });
+        });
+
+        if (assignment) contacts.push(assignment.employee);
+      }
 
       const admin = await prisma.user.findFirst({
         where: { role: 'ADMIN', isActive: true },
@@ -227,7 +248,6 @@ router.get('/contacts', authenticate, async (req: AuthRequest, res: Response) =>
         },
       });
 
-      if (assignment) contacts.push(assignment.employee);
       if (admin) contacts.push(admin);
     }
 

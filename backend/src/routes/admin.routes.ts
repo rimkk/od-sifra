@@ -9,7 +9,7 @@ const router = Router();
 
 // All routes require admin or employee authentication
 router.use(authenticate);
-router.use(authorize([UserRole.ADMIN, UserRole.EMPLOYEE]));
+router.use(authorize(UserRole.ADMIN, UserRole.EMPLOYEE));
 
 // Get dashboard overview
 router.get('/overview', async (req: AuthRequest, res: Response) => {

@@ -165,8 +165,8 @@ export const authService = {
 
   generateToken(userId: string): string {
     return jwt.sign({ userId }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+      expiresIn: JWT_EXPIRES_IN as string,
+    } as jwt.SignOptions);
   },
 
   async createAdminUser(email: string, password: string, name: string) {
