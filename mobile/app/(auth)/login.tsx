@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useTheme, spacing, fontSize } from '@/theme';
@@ -54,9 +55,10 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
-          <View style={[styles.logoContainer, { backgroundColor: theme.colors.secondary }]}>
-            <Text style={styles.logoText}>OS</Text>
-          </View>
+          <Image 
+            source={require('../../assets/icon.png')} 
+            style={styles.logo}
+          />
           <Text style={[styles.title, { color: theme.colors.text }]}>Od Sifra</Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             Property Management
@@ -123,18 +125,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  logoContainer: {
+  logo: {
     width: 80,
     height: 80,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: spacing.md,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#CFFC92',
   },
   title: {
     fontSize: fontSize.xxxl,

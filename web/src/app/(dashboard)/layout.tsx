@@ -64,9 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-[var(--border)] bg-[var(--surface)]">
         {/* Logo */}
         <div className="flex h-16 items-center gap-3 border-b border-[var(--border)] px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary">
-            <span className="text-sm font-bold text-primary">OS</span>
-          </div>
+          <img src="/logo.png" alt="Od Sifra" className="h-9 w-9 rounded-lg" />
           <span className="text-lg font-bold text-[var(--text)]">Od Sifra</span>
         </div>
 

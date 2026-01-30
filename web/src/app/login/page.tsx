@@ -35,9 +35,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-secondary mb-4">
-            <span className="text-3xl font-bold text-primary">OS</span>
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="Od Sifra" 
+            className="w-20 h-20 mx-auto mb-4 rounded-2xl"
+          />
           <h1 className="text-3xl font-bold text-[var(--text)]">Od Sifra</h1>
           <p className="text-[var(--text-secondary)] mt-1">Property Management</p>
         </div>
