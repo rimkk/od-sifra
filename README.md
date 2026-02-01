@@ -94,7 +94,55 @@ See [backend/README.md](backend/README.md) for API endpoints documentation.
 
 ## Deployment
 
-The app is configured for deployment with JFrog Fly. See deployment configuration in the respective directories.
+### Firebase Deployment
+
+The app is configured for Firebase deployment:
+
+```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Create a new Firebase project (if needed)
+firebase projects:create od-sifra
+
+# Deploy everything
+firebase deploy
+
+# Deploy only web app
+firebase deploy --only hosting
+
+# Deploy only functions (API)
+firebase deploy --only functions
+```
+
+#### Firebase Setup Steps
+
+1. **Create Firebase Project**:
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create a new project named "od-sifra"
+   - Enable Cloud Functions (requires Blaze plan)
+
+2. **Configure GitHub Secrets** (for CI/CD):
+   - `FIREBASE_SERVICE_ACCOUNT`: Service account JSON for hosting
+   - `FIREBASE_TOKEN`: Token from `firebase login:ci`
+   - `FIREBASE_API_URL`: Your deployed API URL
+
+3. **Database**:
+   - For production, use a managed PostgreSQL service (e.g., Cloud SQL, Supabase, Neon)
+   - Update `DATABASE_URL` in Firebase Functions environment
+
+4. **Environment Variables**:
+   ```bash
+   # Set functions config
+   firebase functions:config:set database.url="your-database-url" jwt.secret="your-jwt-secret"
+   ```
+
+### Alternative: Docker Deployment
+
+The app also supports Docker deployment via JFrog Fly. See `docker-compose.yml` for local development.
 
 ## License
 
