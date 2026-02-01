@@ -12,7 +12,7 @@ interface Thread {
   title?: string;
   isGroup: boolean;
   updatedAt: string;
-  participantUsers: { id: string; name: string; avatarUrl?: string }[];
+  participantUsers: { id: string; name: string; avatarUrl?: string; role?: string }[];
   unreadCount: number;
   lastMessage?: {
     content: string;
@@ -22,7 +22,8 @@ interface Thread {
 }
 
 interface Member {
-  user: { id: string; name: string; avatarUrl?: string };
+  user: { id: string; name: string; avatarUrl?: string; role?: string };
+  role: string;
 }
 
 export default function MessagesPage() {
@@ -138,49 +139,68 @@ export default function MessagesPage() {
             </button>
           </div>
         ) : (
-          filteredThreads.map((thread) => (
-            <Link
-              key={thread.id}
-              href={`/messages/${thread.id}`}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-hover)] border-b border-[var(--border)] transition-colors"
-            >
-              {/* Avatar */}
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-medium">
-                  {thread.participantUsers[0]?.avatarUrl ? (
-                    <img src={thread.participantUsers[0].avatarUrl} alt="" className="w-full h-full rounded-full" />
-                  ) : (
-                    getThreadName(thread).charAt(0)
-                  )}
-                </div>
-                {thread.unreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[var(--primary)] text-white text-xs flex items-center justify-center">
-                    {thread.unreadCount}
+          filteredThreads.map((thread) => {
+            const otherParticipant = thread.participantUsers.find((p) => p.id !== user?.id);
+            const roleLabels: Record<string, { label: string; color: string }> = {
+              OWNER_ADMIN: { label: 'Admin', color: 'text-purple-400 bg-purple-500/10' },
+              EMPLOYEE: { label: 'Team', color: 'text-blue-400 bg-blue-500/10' },
+              CUSTOMER: { label: 'Client', color: 'text-emerald-400 bg-emerald-500/10' },
+            };
+            const role = otherParticipant?.role ? roleLabels[otherParticipant.role] : null;
+            
+            return (
+              <Link
+                key={thread.id}
+                href={`/messages/${thread.id}`}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--surface-hover)] border-b border-[var(--border)] transition-colors"
+              >
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-medium">
+                    {otherParticipant?.avatarUrl ? (
+                      <img src={otherParticipant.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      getThreadName(thread).charAt(0).toUpperCase()
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-0.5">
-                  <p className={`font-medium text-sm truncate ${thread.unreadCount > 0 ? 'text-[var(--text)]' : 'text-[var(--text-secondary)]'}`}>
-                    {getThreadName(thread)}
-                  </p>
-                  {thread.lastMessage && (
-                    <span className="text-xs text-[var(--text-muted)] flex-shrink-0 ml-2">
-                      {formatDistanceToNow(new Date(thread.lastMessage.createdAt), { addSuffix: true })}
-                    </span>
+                  {/* Online indicator */}
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[var(--background)]" />
+                  {thread.unreadCount > 0 && (
+                    <div className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--primary)] text-white text-xs flex items-center justify-center font-medium">
+                      {thread.unreadCount > 9 ? '9+' : thread.unreadCount}
+                    </div>
                   )}
                 </div>
-                {thread.lastMessage && (
-                  <p className={`text-sm truncate ${thread.unreadCount > 0 ? 'text-[var(--text-secondary)]' : 'text-[var(--text-tertiary)]'}`}>
-                    {thread.lastMessage.sender.id === user?.id ? 'You: ' : ''}
-                    {thread.lastMessage.content}
-                  </p>
-                )}
-              </div>
-            </Link>
-          ))
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className={`font-medium text-sm truncate ${thread.unreadCount > 0 ? 'text-[var(--text)]' : 'text-[var(--text-secondary)]'}`}>
+                        {getThreadName(thread)}
+                      </p>
+                      {role && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${role.color}`}>
+                          {role.label}
+                        </span>
+                      )}
+                    </div>
+                    {thread.lastMessage && (
+                      <span className="text-[10px] sm:text-xs text-[var(--text-muted)] flex-shrink-0 ml-2">
+                        {formatDistanceToNow(new Date(thread.lastMessage.createdAt), { addSuffix: true })}
+                      </span>
+                    )}
+                  </div>
+                  {thread.lastMessage && (
+                    <p className={`text-xs sm:text-sm truncate ${thread.unreadCount > 0 ? 'text-[var(--text-secondary)] font-medium' : 'text-[var(--text-tertiary)]'}`}>
+                      {thread.lastMessage.sender.id === user?.id ? 'You: ' : ''}
+                      {thread.lastMessage.content}
+                    </p>
+                  )}
+                </div>
+              </Link>
+            );
+          })
         )}
       </div>
 
@@ -190,32 +210,69 @@ export default function MessagesPage() {
           <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] w-full max-w-sm shadow-xl">
             <div className="px-5 py-4 border-b border-[var(--border)]">
               <h2 className="font-semibold text-[var(--text)]">New Message</h2>
+              <p className="text-xs text-[var(--text-tertiary)] mt-0.5">Start a conversation with a team member</p>
             </div>
 
             <div className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-1.5">
+                <label className="block text-sm font-medium text-[var(--text)] mb-2">
                   Select recipient
                 </label>
-                <select
-                  value={selectedMember}
-                  onChange={(e) => setSelectedMember(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)]"
-                >
-                  <option value="">Choose a person...</option>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
                   {members
                     .filter((m) => m.user.id !== user?.id)
-                    .map((m) => (
-                      <option key={m.user.id} value={m.user.id}>
-                        {m.user.name}
-                      </option>
-                    ))}
-                </select>
+                    .map((m) => {
+                      const roleLabels: Record<string, { label: string; color: string }> = {
+                        OWNER_ADMIN: { label: 'Admin', color: 'text-purple-400 bg-purple-500/10' },
+                        EMPLOYEE: { label: 'Team', color: 'text-blue-400 bg-blue-500/10' },
+                        CUSTOMER: { label: 'Client', color: 'text-emerald-400 bg-emerald-500/10' },
+                      };
+                      const role = roleLabels[m.user.role || m.role] || roleLabels.CUSTOMER;
+                      
+                      return (
+                        <button
+                          key={m.user.id}
+                          onClick={() => setSelectedMember(m.user.id)}
+                          className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                            selectedMember === m.user.id
+                              ? 'border-[var(--primary)] bg-[var(--primary)]/5'
+                              : 'border-[var(--border)] hover:border-[var(--border-hover)] hover:bg-[var(--surface-hover)]'
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-medium flex-shrink-0">
+                            {m.user.avatarUrl ? (
+                              <img src={m.user.avatarUrl} alt="" className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              m.user.name.charAt(0).toUpperCase()
+                            )}
+                          </div>
+                          <div className="flex-1 text-left min-w-0">
+                            <p className="font-medium text-sm text-[var(--text)] truncate">{m.user.name}</p>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${role.color}`}>
+                              {role.label}
+                            </span>
+                          </div>
+                          {selectedMember === m.user.id && (
+                            <div className="w-5 h-5 rounded-full bg-[var(--primary)] flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  {members.filter((m) => m.user.id !== user?.id).length === 0 && (
+                    <p className="text-sm text-[var(--text-tertiary)] text-center py-4">
+                      No team members available
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 pt-2">
                 <button
-                  onClick={() => setShowNewThread(false)}
+                  onClick={() => { setShowNewThread(false); setSelectedMember(''); }}
                   className="flex-1 h-10 rounded-lg border border-[var(--border)] text-[var(--text)] font-medium text-sm hover:bg-[var(--surface-hover)] transition-colors"
                 >
                   Cancel
