@@ -20,9 +20,6 @@ jobs:
   test:
     name: Test & Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
 
     steps:
       - uses: actions/checkout@v4
@@ -33,16 +30,19 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --workspace=backend
 
       - name: Generate Prisma Client
         run: npx prisma generate
+        working-directory: backend
 
       - name: TypeScript check
         run: npx tsc --noEmit
+        working-directory: backend
 
       - name: Build
         run: npm run build
+        working-directory: backend
 
   docker-build-push:
     name: Build & Push Docker Image

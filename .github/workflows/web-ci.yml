@@ -20,9 +20,6 @@ jobs:
   test:
     name: Lint & Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
 
     steps:
       - uses: actions/checkout@v4
@@ -33,16 +30,19 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --workspace=web
 
       - name: TypeScript check
         run: npx tsc --noEmit
+        working-directory: web
 
       - name: Lint
         run: npm run lint || true
+        working-directory: web
 
       - name: Build
         run: npm run build
+        working-directory: web
         env:
           NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://api.odsifra.com/api' }}
 
