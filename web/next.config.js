@@ -5,10 +5,17 @@ const nextConfig = {
     domains: ['localhost'],
   },
   async rewrites() {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    
+    // Only add rewrites if API URL is configured
+    if (!apiUrl) {
+      return [];
+    }
+    
     return [
       {
         source: '/api/:path*',
-        destination: process.env.NEXT_PUBLIC_API_URL + '/:path*',
+        destination: `${apiUrl}/:path*`,
       },
     ];
   },
