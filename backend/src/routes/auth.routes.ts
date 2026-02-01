@@ -12,9 +12,24 @@ router.get('/debug-admin', async (_req: Request, res: Response) => {
   try {
     const admin = await prisma.user.findUnique({
       where: { email: 'moria.mann97@gmail.com' },
-      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true, updatedAt: true },
     });
-    res.json({ adminExists: !!admin, admin });
+    res.json({ adminExists: !!admin, admin, serverTime: new Date().toISOString() });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset admin password (temporary - remove after fixing)
+router.post('/reset-admin-password', async (_req: Request, res: Response) => {
+  try {
+    const bcrypt = await import('bcryptjs');
+    const passwordHash = await bcrypt.hash('1234567', 12);
+    const admin = await prisma.user.update({
+      where: { email: 'moria.mann97@gmail.com' },
+      data: { passwordHash },
+    });
+    res.json({ success: true, message: 'Admin password reset', email: admin.email });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
