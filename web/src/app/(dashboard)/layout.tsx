@@ -78,13 +78,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-[var(--background-alt)] border-r border-[var(--border)]">
         {/* Logo */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-[var(--border)]">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-sm">OS</span>
-          </div>
+        <div className="h-14 flex items-center gap-3 px-4 border-b border-[var(--border)]">
+          <img src="/logo.png" alt="Od Sifra" className="h-8 w-8 rounded-lg" />
           <div>
-            <h1 className="font-semibold text-[var(--text)]">Od Sifra</h1>
-            <p className="text-xs text-[var(--text-tertiary)]">Property Management</p>
+            <h1 className="font-semibold text-[var(--text)] text-sm">Od Sifra</h1>
           </div>
         </div>
 

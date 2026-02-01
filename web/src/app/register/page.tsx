@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Lock, User, CheckCircle, ArrowRight, Info } from 'lucide-react';
+import { Mail, Lock, User, CheckCircle, Info } from 'lucide-react';
 import { Button, Input } from '@/components/ui';
 import { useAuthStore } from '@/store/auth';
 import { invitationApi } from '@/lib/api';
@@ -86,17 +86,17 @@ function RegisterForm() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
-        <div className="w-full max-w-md text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[var(--success-light)] flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-[var(--success)]" />
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--success-light)] flex items-center justify-center">
+            <CheckCircle className="w-6 h-6 text-[var(--success)]" />
           </div>
-          <h1 className="text-2xl font-bold text-[var(--text)] mb-2">Account Created!</h1>
-          <p className="text-[var(--text-secondary)] mb-8">
-            Your account is pending approval. You&apos;ll receive an email once an administrator reviews your request.
+          <h1 className="text-lg font-semibold text-[var(--text)] mb-2">Account Created</h1>
+          <p className="text-sm text-[var(--text-secondary)] mb-6">
+            Your account is pending approval. You&apos;ll be notified once approved.
           </p>
           <Link href="/login">
-            <Button variant="outline" className="w-full max-w-xs mx-auto">
+            <Button variant="outline" className="w-full">
               Back to Sign In
             </Button>
           </Link>
@@ -106,125 +106,88 @@ function RegisterForm() {
   }
 
   return (
-    <div className="min-h-screen flex bg-[var(--background)]">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[var(--accent)] via-[#7C3AED] to-[var(--primary)] p-12 flex-col justify-between">
-        <div>
-          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-            <span className="text-white font-bold text-xl">OS</span>
-          </div>
-        </div>
-        <div>
-          <h1 className="text-4xl font-bold text-white mb-4">
-            Join Our<br />Community
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <img src="/logo.png" alt="Od Sifra" className="w-12 h-12 mx-auto mb-4 rounded-xl" />
+          <h1 className="text-xl font-semibold text-[var(--text)]">
+            {invitation ? 'Complete Registration' : 'Create an account'}
           </h1>
-          <p className="text-white/80 text-lg max-w-md">
-            Get started with the most powerful property management platform. Track investments and grow your portfolio.
+          <p className="text-sm text-[var(--text-tertiary)] mt-1">
+            {invitation ? `Invited by ${invitation.inviterName}` : 'Sign up to get started'}
           </p>
         </div>
-        <div className="space-y-4">
-          {['Real-time project tracking', 'Financial analytics', 'Team collaboration'].map((feature, i) => (
-            <div key={i} className="flex items-center gap-3 text-white/90">
-              <CheckCircle size={20} />
-              <span>{feature}</span>
+
+        {/* Form */}
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-[var(--error-light)] text-[var(--error)] text-sm">
+              {error}
             </div>
-          ))}
-        </div>
-      </div>
+          )}
 
-      {/* Right side - Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="w-14 h-14 mx-auto rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg mb-4">
-              <span className="text-white font-bold text-xl">OS</span>
+          {!invitation && (
+            <div className="mb-4 p-3 rounded-lg bg-[var(--surface-hover)] text-xs text-[var(--text-secondary)] flex items-start gap-2">
+              <Info size={14} className="flex-shrink-0 mt-0.5" />
+              <span>Account requires admin approval</span>
             </div>
-          </div>
+          )}
 
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-[var(--text)]">
-              {invitation ? 'Complete your registration' : 'Create an account'}
-            </h2>
-            <p className="text-[var(--text-secondary)] mt-2">
-              {invitation 
-                ? `You've been invited by ${invitation.inviterName}` 
-                : 'Sign up to get started with Od Sifra'}
-            </p>
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Name"
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              icon={<User size={16} />}
+              required
+            />
 
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-xl p-8">
-            {error && (
-              <div className="mb-6 p-4 rounded-lg bg-[var(--error-light)] border border-[var(--error)]/20 text-[var(--error)] text-sm flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[var(--error)]" />
-                {error}
-              </div>
-            )}
+            <Input
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon={<Mail size={16} />}
+              disabled={!!invitation}
+              required
+            />
 
-            {!invitation && (
-              <div className="mb-6 p-4 rounded-lg bg-[var(--info-light)] border border-[var(--info)]/20 text-[var(--info)] text-sm flex items-start gap-3">
-                <Info size={18} className="flex-shrink-0 mt-0.5" />
-                <span>Your account will require admin approval before you can sign in.</span>
-              </div>
-            )}
+            <Input
+              label="Password"
+              type="password"
+              placeholder="Min. 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              icon={<Lock size={16} />}
+              required
+            />
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <Input
-                label="Full name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                icon={<User size={18} />}
-                required
-              />
+            <Input
+              label="Confirm Password"
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              icon={<Lock size={16} />}
+              required
+            />
 
-              <Input
-                label="Email address"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                icon={<Mail size={18} />}
-                disabled={!!invitation}
-                required
-              />
-
-              <Input
-                label="Password"
-                type="password"
-                placeholder="Min. 8 characters"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                icon={<Lock size={18} />}
-                hint="Must be at least 8 characters"
-                required
-              />
-
-              <Input
-                label="Confirm password"
-                type="password"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                icon={<Lock size={18} />}
-                required
-              />
-
-              <Button type="submit" className="w-full h-11" loading={loading}>
-                {invitation ? 'Create Account' : 'Request Access'}
-                <ArrowRight size={18} />
-              </Button>
-            </form>
-          </div>
-
-          <p className="mt-8 text-center text-sm text-[var(--text-tertiary)]">
-            Already have an account?{' '}
-            <Link href="/login" className="text-[var(--primary)] font-medium hover:underline">
-              Sign in
-            </Link>
-          </p>
+            <Button type="submit" className="w-full" loading={loading}>
+              {invitation ? 'Create Account' : 'Request Access'}
+            </Button>
+          </form>
         </div>
+
+        <p className="mt-6 text-center text-sm text-[var(--text-tertiary)]">
+          Already have an account?{' '}
+          <Link href="/login" className="text-[var(--primary)] hover:underline">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -5,19 +5,19 @@ import {
   Plus, 
   Search, 
   Users, 
-  Building2, 
   Mail, 
   Phone, 
-  MoreVertical, 
   Edit2, 
-  Trash2, 
   X,
   FolderKanban,
   User,
-  ChevronRight,
+  UserPlus,
+  Send,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/ui';
-import { customerAccountApi, projectApi } from '@/lib/api';
+import { customerAccountApi, projectApi, invitationApi } from '@/lib/api';
 import { useAuthStore } from '@/store/auth';
 
 interface CustomerAccount {
@@ -38,15 +38,26 @@ interface Employee {
   email: string;
 }
 
+type ModalStep = 'details' | 'invite';
+
 export default function CustomersPage() {
   const { user } = useAuthStore();
   const [accounts, setAccounts] = useState<CustomerAccount[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState<CustomerAccount | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalStep, setModalStep] = useState<ModalStep>('details');
+  const [editingAccount, setEditingAccount] = useState<CustomerAccount | null>(null);
   const [saving, setSaving] = useState(false);
+  const [createdAccountId, setCreatedAccountId] = useState<string | null>(null);
+  
+  // Invite modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteAccountId, setInviteAccountId] = useState<string | null>(null);
+  const [inviteEmails, setInviteEmails] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [inviteSuccess, setInviteSuccess] = useState(false);
   
   // Form state
   const [form, setForm] = useState({
@@ -55,8 +66,6 @@ export default function CustomersPage() {
     email: '',
     phone: '',
   });
-
-  const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
     fetchData();
@@ -84,12 +93,12 @@ export default function CustomersPage() {
 
     try {
       setSaving(true);
-      await customerAccountApi.create({
+      const result = await customerAccountApi.create({
         accountName: form.name,
         description: form.description || undefined,
       });
-      setShowCreate(false);
-      resetForm();
+      setCreatedAccountId(result.data.customerAccount?.id || null);
+      setModalStep('invite');
       fetchData();
     } catch (error) {
       console.error('Failed to create customer:', error);
@@ -100,16 +109,15 @@ export default function CustomersPage() {
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!showEdit || !form.name.trim()) return;
+    if (!editingAccount || !form.name.trim()) return;
 
     try {
       setSaving(true);
-      await customerAccountApi.update(showEdit.id, {
+      await customerAccountApi.update(editingAccount.id, {
         name: form.name,
         description: form.description || undefined,
       });
-      setShowEdit(null);
-      resetForm();
+      closeModal();
       fetchData();
     } catch (error) {
       console.error('Failed to update customer:', error);
@@ -118,8 +126,44 @@ export default function CustomersPage() {
     }
   };
 
+  const handleInvite = async () => {
+    const accountId = inviteAccountId || createdAccountId;
+    if (!accountId || !inviteEmails.trim()) return;
+
+    const emails = inviteEmails.split(/[,\n]/).map(e => e.trim()).filter(e => e);
+    if (emails.length === 0) return;
+
+    try {
+      setInviting(true);
+      await customerAccountApi.inviteUsers(accountId, emails);
+      setInviteSuccess(true);
+      setTimeout(() => {
+        if (showInviteModal) {
+          closeInviteModal();
+        } else {
+          closeModal();
+        }
+        fetchData();
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to invite users:', error);
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const resetForm = () => {
     setForm({ name: '', description: '', email: '', phone: '' });
+    setModalStep('details');
+    setCreatedAccountId(null);
+    setInviteEmails('');
+    setInviteSuccess(false);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingAccount(null);
+    resetForm();
   };
 
   const openEdit = (account: CustomerAccount) => {
@@ -129,7 +173,22 @@ export default function CustomersPage() {
       email: account.email || '',
       phone: account.phone || '',
     });
-    setShowEdit(account);
+    setEditingAccount(account);
+    setShowModal(true);
+  };
+
+  const openInvite = (account: CustomerAccount) => {
+    setInviteAccountId(account.id);
+    setInviteEmails('');
+    setInviteSuccess(false);
+    setShowInviteModal(true);
+  };
+
+  const closeInviteModal = () => {
+    setShowInviteModal(false);
+    setInviteAccountId(null);
+    setInviteEmails('');
+    setInviteSuccess(false);
   };
 
   // Filter accounts
@@ -140,218 +199,282 @@ export default function CustomersPage() {
   );
 
   return (
-    <div className="p-8">
+    <div className="p-6 lg:p-8 max-w-6xl">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text)]">Customers</h1>
-          <p className="text-[var(--text-secondary)] mt-1">Manage customer accounts</p>
+          <h1 className="text-xl font-semibold text-[var(--text)]">Customers</h1>
+          <p className="text-sm text-[var(--text-tertiary)] mt-0.5">Manage customer accounts</p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus size={18} />
-          New Customer
+        <Button onClick={() => { resetForm(); setShowModal(true); }}>
+          <Plus size={16} />
+          Add Customer
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <p className="text-sm text-[var(--text-secondary)]">Total Customers</p>
-          <p className="text-2xl font-bold text-[var(--text)]">{accounts.length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-[var(--text-secondary)]">Active</p>
-          <p className="text-2xl font-bold text-emerald-500">{accounts.filter((a) => a.isActive).length}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-[var(--text-secondary)]">With Projects</p>
-          <p className="text-2xl font-bold text-[var(--primary)]">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+          <p className="text-xs text-[var(--text-tertiary)] mb-1">Total</p>
+          <p className="text-2xl font-semibold text-[var(--text)]">{accounts.length}</p>
+        </div>
+        <div className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+          <p className="text-xs text-[var(--text-tertiary)] mb-1">Active</p>
+          <p className="text-2xl font-semibold text-[var(--success)]">{accounts.filter((a) => a.isActive).length}</p>
+        </div>
+        <div className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+          <p className="text-xs text-[var(--text-tertiary)] mb-1">With Projects</p>
+          <p className="text-2xl font-semibold text-[var(--primary)]">
             {accounts.filter((a) => (a._count?.projects || 0) > 0).length}
           </p>
-        </Card>
-        <Card>
-          <p className="text-sm text-[var(--text-secondary)]">Total Users</p>
-          <p className="text-2xl font-bold text-[var(--text)]">
+        </div>
+        <div className="p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
+          <p className="text-xs text-[var(--text-tertiary)] mb-1">Total Users</p>
+          <p className="text-2xl font-semibold text-[var(--text)]">
             {accounts.reduce((sum, a) => sum + (a._count?.users || 0), 0)}
           </p>
-        </Card>
+        </div>
       </div>
 
       {/* Search */}
       <div className="relative mb-6">
-        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
         <input
           type="text"
           placeholder="Search customers..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-10 pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+          className="w-full h-9 pl-9 pr-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
         />
       </div>
 
       {/* Create/Edit Modal */}
-      {(showCreate || showEdit) && (
+      {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] w-full max-w-md shadow-xl">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
-              <h2 className="text-lg font-semibold text-[var(--text)]">
-                {showEdit ? 'Edit Customer' : 'New Customer'}
+          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] w-full max-w-md shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+              <h2 className="font-semibold text-[var(--text)]">
+                {editingAccount ? 'Edit Customer' : modalStep === 'details' ? 'Add Customer' : 'Invite Users'}
               </h2>
               <button
-                onClick={() => { setShowCreate(false); setShowEdit(null); resetForm(); }}
-                className="p-2 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] transition-colors"
+                onClick={closeModal}
+                className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={showEdit ? handleUpdate : handleCreate} className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-2">Name *</label>
-                <input
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g., Smith Family"
-                  className="w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
-                  required
-                />
-              </div>
+            {/* Content */}
+            <div className="p-5">
+              {modalStep === 'details' ? (
+                <form onSubmit={editingAccount ? handleUpdate : handleCreate} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Name *</label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      placeholder="e.g., Smith Family"
+                      className="w-full h-9 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                      required
+                      autoFocus
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--text)] mb-2">Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Notes about this customer..."
-                  rows={3}
-                  className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Description</label>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm({ ...form, description: e.target.value })}
+                      placeholder="Notes about this customer..."
+                      rows={2}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text)] mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    placeholder="contact@example.com"
-                    className="w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
-                  />
+                  <div className="flex gap-3 pt-2">
+                    <Button type="button" variant="outline" className="flex-1" onClick={closeModal}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="flex-1" loading={saving}>
+                      {editingAccount ? 'Save' : 'Continue'}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-4">
+                  {inviteSuccess ? (
+                    <div className="text-center py-6">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--success-light)] flex items-center justify-center">
+                        <Check className="w-6 h-6 text-[var(--success)]" />
+                      </div>
+                      <p className="text-sm text-[var(--text)]">Invitations sent successfully!</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-3 rounded-lg bg-[var(--surface-hover)] text-xs text-[var(--text-secondary)] flex items-start gap-2">
+                        <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                        <span>Invite users to access this customer account. They&apos;ll receive an email to set up their account.</span>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Email addresses</label>
+                        <textarea
+                          value={inviteEmails}
+                          onChange={(e) => setInviteEmails(e.target.value)}
+                          placeholder="Enter email addresses (one per line or comma-separated)"
+                          rows={3}
+                          className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                          autoFocus
+                        />
+                      </div>
+
+                      <div className="flex gap-3 pt-2">
+                        <Button type="button" variant="outline" className="flex-1" onClick={closeModal}>
+                          Skip for now
+                        </Button>
+                        <Button onClick={handleInvite} className="flex-1" loading={inviting} disabled={!inviteEmails.trim()}>
+                          <Send size={14} />
+                          Send Invites
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text)] mb-2">Phone</label>
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="+1 (555) 000-0000"
-                    className="w-full h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
-                  />
-                </div>
-              </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="flex gap-3 pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="flex-1" 
-                  onClick={() => { setShowCreate(false); setShowEdit(null); resetForm(); }}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" className="flex-1" loading={saving}>
-                  {showEdit ? 'Save Changes' : 'Create Customer'}
-                </Button>
-              </div>
-            </form>
+      {/* Invite Modal (for existing accounts) */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border)]">
+              <h2 className="font-semibold text-[var(--text)]">Invite Users</h2>
+              <button
+                onClick={closeInviteModal}
+                className="p-1.5 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {inviteSuccess ? (
+                <div className="text-center py-6">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--success-light)] flex items-center justify-center">
+                    <Check className="w-6 h-6 text-[var(--success)]" />
+                  </div>
+                  <p className="text-sm text-[var(--text)]">Invitations sent successfully!</p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Email addresses</label>
+                    <textarea
+                      value={inviteEmails}
+                      onChange={(e) => setInviteEmails(e.target.value)}
+                      placeholder="Enter email addresses (one per line or comma-separated)"
+                      rows={3}
+                      className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button type="button" variant="outline" className="flex-1" onClick={closeInviteModal}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleInvite} className="flex-1" loading={inviting} disabled={!inviteEmails.trim()}>
+                      <Send size={14} />
+                      Send Invites
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="relative w-10 h-10">
+        <div className="flex items-center justify-center py-16">
+          <div className="relative w-8 h-8">
             <div className="absolute inset-0 rounded-full border-2 border-[var(--border)]" />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--primary)] animate-spin" />
           </div>
         </div>
       ) : filteredAccounts.length === 0 ? (
-        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-16 text-center shadow-sm">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center">
-            <Users className="text-[var(--primary)]" size={28} />
-          </div>
-          <h3 className="text-lg font-semibold text-[var(--text)] mb-2">
+        <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-12 text-center">
+          <Users className="mx-auto text-[var(--text-muted)] mb-3" size={32} />
+          <h3 className="font-medium text-[var(--text)] mb-1">
             {accounts.length === 0 ? 'No customers yet' : 'No matching customers'}
           </h3>
-          <p className="text-[var(--text-secondary)] mb-6 max-w-sm mx-auto">
+          <p className="text-sm text-[var(--text-tertiary)] mb-4">
             {accounts.length === 0 
-              ? 'Add your first customer to start managing their property portfolios.'
+              ? 'Add your first customer to start managing their portfolios.'
               : 'Try adjusting your search criteria.'}
           </p>
           {accounts.length === 0 && (
-            <Button onClick={() => setShowCreate(true)}>
-              <Plus size={18} />
+            <Button size="sm" onClick={() => { resetForm(); setShowModal(true); }}>
+              <Plus size={14} />
               Add Customer
             </Button>
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filteredAccounts.map((account) => (
             <div
               key={account.id}
-              className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5 hover:border-[var(--text-muted)] transition-all"
+              className="bg-[var(--surface)] rounded-lg border border-[var(--border)] p-4 hover:border-[var(--text-muted)] transition-colors"
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-center gap-4">
                 {/* Avatar */}
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                   {account.name.charAt(0)}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-semibold text-[var(--text)]">{account.name}</h3>
-                    {account.isActive ? (
-                      <Badge text="Active" variant="success" size="xs" />
-                    ) : (
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <h3 className="font-medium text-sm text-[var(--text)]">{account.name}</h3>
+                    {!account.isActive && (
                       <Badge text="Inactive" variant="default" size="xs" />
                     )}
                   </div>
 
-                  {account.description && (
-                    <p className="text-sm text-[var(--text-secondary)] mb-2 line-clamp-1">{account.description}</p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-tertiary)]">
                     {account.email && (
-                      <div className="flex items-center gap-1.5 text-[var(--text-tertiary)]">
-                        <Mail size={14} />
-                        <span>{account.email}</span>
-                      </div>
+                      <span className="flex items-center gap-1">
+                        <Mail size={12} />
+                        {account.email}
+                      </span>
                     )}
-                    {account.phone && (
-                      <div className="flex items-center gap-1.5 text-[var(--text-tertiary)]">
-                        <Phone size={14} />
-                        <span>{account.phone}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5 text-[var(--text-tertiary)]">
-                      <FolderKanban size={14} />
-                      <span>{account._count?.projects || 0} projects</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-[var(--text-tertiary)]">
-                      <User size={14} />
-                      <span>{account._count?.users || 0} users</span>
-                    </div>
+                    <span className="flex items-center gap-1">
+                      <FolderKanban size={12} />
+                      {account._count?.projects || 0} projects
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <User size={12} />
+                      {account._count?.users || 0} users
+                    </span>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => openInvite(account)}
+                    className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] transition-colors"
+                    title="Invite users"
+                  >
+                    <UserPlus size={16} />
+                  </button>
                   <button
                     onClick={() => openEdit(account)}
                     className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors"
