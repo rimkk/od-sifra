@@ -3,6 +3,7 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import { PrismaClient } from '@prisma/client';
 
 import authRoutes from './routes/auth.routes';
 import workspaceRoutes from './routes/workspace.routes';
@@ -16,6 +17,12 @@ import notificationRoutes from './routes/notification.routes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
+
+// Test database connection on startup
+const prisma = new PrismaClient();
+prisma.$connect()
+  .then(() => console.log('✅ Database connected'))
+  .catch((err) => console.error('❌ Database connection failed:', err.message));
 
 const app = express();
 const httpServer = createServer(app);
