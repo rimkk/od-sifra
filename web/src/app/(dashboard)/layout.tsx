@@ -17,10 +17,10 @@ import {
   UserPlus,
   UserCog,
   FolderKanban,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/components/providers/ThemeProvider';
-import { Avatar, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -38,7 +38,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="relative w-10 h-10">
+          <div className="absolute inset-0 rounded-full border-2 border-[var(--border)]" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--primary)] animate-spin" />
+        </div>
       </div>
     );
   }
@@ -47,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isEmployee = user?.role === 'EMPLOYEE';
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Overview', href: '/dashboard', icon: Home },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
     ...(isAdmin || isEmployee
       ? [{ name: 'Customers', href: '/dashboard/customers', icon: Users }]
@@ -61,96 +64,114 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.replace('/login');
   };
 
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="min-h-screen bg-[var(--background)]">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r border-[var(--border)] bg-[var(--background)]">
+      <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-[var(--background-alt)] border-r border-[var(--border)]">
         {/* Logo */}
-        <div className="flex h-12 items-center gap-2.5 px-4">
-          <img src="/logo.png" alt="Od Sifra" className="h-6 w-6 rounded" />
-          <span className="text-sm font-semibold text-[var(--text)]">Od Sifra</span>
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-[var(--border)]">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-sm">OS</span>
+          </div>
+          <div>
+            <h1 className="font-semibold text-[var(--text)]">Od Sifra</h1>
+            <p className="text-xs text-[var(--text-tertiary)]">Property Management</p>
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-col gap-px px-2 mt-2">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-[13px] transition-colors',
-                  isActive
-                    ? 'bg-[var(--surface-secondary)] text-[var(--text)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text)]'
-                )}
-              >
-                <item.icon size={16} strokeWidth={1.5} />
-                {item.name}
-              </Link>
-            );
-          })}
+        <div className="p-3">
+          <p className="px-3 mb-2 text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Menu</p>
+          <nav className="space-y-1">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? 'bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/25'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'
+                  )}
+                >
+                  <item.icon size={18} strokeWidth={isActive ? 2 : 1.5} />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
 
           {(isAdmin || isEmployee) && (
             <>
-              <div className="my-2 mx-2.5 border-t border-[var(--border)]" />
-              <Link
-                href="/dashboard/invite"
-                className={cn(
-                  'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-[13px] transition-colors',
-                  pathname === '/dashboard/invite'
-                    ? 'bg-[var(--surface-secondary)] text-[var(--text)]'
-                    : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text)]'
+              <div className="my-4 border-t border-[var(--border)]" />
+              <p className="px-3 mb-2 text-xs font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Admin</p>
+              <nav className="space-y-1">
+                <Link
+                  href="/dashboard/invite"
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                    pathname === '/dashboard/invite'
+                      ? 'bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/25'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'
+                  )}
+                >
+                  <UserPlus size={18} strokeWidth={1.5} />
+                  Invite User
+                </Link>
+                {isAdmin && (
+                  <Link
+                    href="/dashboard/users"
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                      pathname === '/dashboard/users'
+                        ? 'bg-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/25'
+                        : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text)]'
+                    )}
+                  >
+                    <UserCog size={18} strokeWidth={1.5} />
+                    User Management
+                  </Link>
                 )}
-              >
-                <UserPlus size={16} strokeWidth={1.5} />
-                Invite User
-              </Link>
+              </nav>
             </>
           )}
-
-          {isAdmin && (
-            <Link
-              href="/dashboard/users"
-              className={cn(
-                'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-[13px] transition-colors',
-                pathname === '/dashboard/users'
-                  ? 'bg-[var(--surface-secondary)] text-[var(--text)]'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text)]'
-              )}
-            >
-              <UserCog size={16} strokeWidth={1.5} />
-              Users
-            </Link>
-          )}
-        </nav>
+        </div>
 
         {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-[var(--border)] p-2">
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer">
-            <Avatar name={user?.name || ''} size="xs" />
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] text-[var(--text)] truncate">{user?.name}</p>
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-[var(--border)] bg-[var(--background-alt)]">
+          <div className="flex items-center gap-3 p-2 rounded-lg bg-[var(--surface-hover)]">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold text-sm">
+              {getInitials(user?.name || '')}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-[var(--text)] truncate">{user?.name}</p>
+              <p className="text-xs text-[var(--text-tertiary)] truncate capitalize">{user?.role?.toLowerCase()}</p>
+            </div>
+            <div className="flex items-center">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
-                }}
-                className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text)] hover:bg-[var(--surface-tertiary)] transition-colors"
+                onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text)] hover:bg-[var(--surface-active)] transition-colors"
+                title="Toggle theme"
               >
-                {resolvedTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+                {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
               </button>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleLogout();
-                }}
-                className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors"
+                onClick={handleLogout}
+                className="p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-light)] transition-colors"
+                title="Sign out"
               >
-                <LogOut size={14} />
+                <LogOut size={16} />
               </button>
             </div>
           </div>
@@ -158,7 +179,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main content */}
-      <main className="ml-56 min-h-screen">
+      <main className="ml-64 min-h-screen">
         {children}
       </main>
     </div>

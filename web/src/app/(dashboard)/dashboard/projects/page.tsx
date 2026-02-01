@@ -102,15 +102,15 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="p-6 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-lg font-medium text-[var(--text)]">Projects</h1>
-          <p className="text-sm text-[var(--text-tertiary)]">Manage property acquisition boards</p>
+          <h1 className="text-2xl font-bold text-[var(--text)]">Projects</h1>
+          <p className="text-[var(--text-secondary)] mt-1">Manage property acquisition boards</p>
         </div>
         {isAdminOrEmployee && (
-          <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus size={16} className="mr-1.5" />
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus size={18} />
             New Project
           </Button>
         )}
@@ -193,62 +193,69 @@ export default function ProjectsPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="flex items-center justify-center py-20">
+          <div className="relative w-10 h-10">
+            <div className="absolute inset-0 rounded-full border-2 border-[var(--border)]" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--primary)] animate-spin" />
+          </div>
         </div>
       ) : projects.length === 0 ? (
-        <div className="rounded-lg border border-[var(--border)] p-12 text-center">
-          <FolderKanban className="mx-auto text-[var(--text-muted)] mb-3" size={32} strokeWidth={1.5} />
-          <p className="text-sm text-[var(--text-tertiary)]">No projects yet</p>
+        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-16 text-center shadow-sm">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--primary)]/10 flex items-center justify-center">
+            <FolderKanban className="text-[var(--primary)]" size={28} />
+          </div>
+          <h3 className="text-lg font-semibold text-[var(--text)] mb-2">No projects yet</h3>
+          <p className="text-[var(--text-secondary)] mb-6 max-w-sm mx-auto">
+            Create your first project to start tracking property acquisitions for your clients.
+          </p>
           {isAdminOrEmployee && (
-            <p className="text-xs text-[var(--text-muted)] mt-1">Create your first project to get started</p>
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus size={18} />
+              Create Project
+            </Button>
           )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
             <Link
               key={project.id}
               href={`/dashboard/projects/${project.id}`}
-              className="block rounded-lg border border-[var(--border)] p-4 hover:bg-[var(--surface-secondary)] transition-colors"
+              className="group bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5 hover:border-[var(--text-muted)] hover:shadow-md transition-all"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="text-sm font-medium text-[var(--text)]">{project.name}</h3>
-                  {project.customerAccount && (
-                    <p className="text-xs text-[var(--text-tertiary)]">{project.customerAccount.name}</p>
-                  )}
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-bold text-sm">
+                  {project.name.charAt(0)}
                 </div>
-                <ArrowUpRight size={16} className="text-[var(--text-muted)]" />
+                <ArrowUpRight size={18} className="text-[var(--text-muted)] group-hover:text-[var(--primary)] transition-colors" />
               </div>
 
-              {/* Stage pills */}
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {Object.entries(project.stageCounts || {}).map(([stage, count]) => (
-                  <span
+              <h3 className="font-semibold text-[var(--text)] mb-1">{project.name}</h3>
+              {project.customerAccount && (
+                <p className="text-sm text-[var(--text-tertiary)] mb-4">{project.customerAccount.name}</p>
+              )}
+
+              {/* Stage progress */}
+              <div className="flex gap-1 mb-4">
+                {['SEARCHING', 'VIEWING', 'CONSIDERING', 'OFFER_MADE', 'UNDER_CONTRACT', 'CLOSING', 'PURCHASED', 'MANAGING'].map((stage) => (
+                  <div
                     key={stage}
-                    className="px-2 py-0.5 rounded text-[10px] bg-[var(--surface-tertiary)] text-[var(--text-secondary)]"
-                  >
-                    {STAGE_LABELS[stage] || stage}: {count}
-                  </span>
+                    className={`flex-1 h-1.5 rounded-full ${
+                      (project.stageCounts?.[stage] || 0) > 0 ? 'bg-[var(--primary)]' : 'bg-[var(--border)]'
+                    }`}
+                  />
                 ))}
-                {Object.keys(project.stageCounts || {}).length === 0 && (
-                  <span className="text-xs text-[var(--text-muted)]">No properties yet</span>
-                )}
               </div>
 
               {/* Stats */}
-              <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)]">
-                <div className="flex items-center gap-1">
-                  <Building2 size={12} />
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
+                  <Building2 size={14} />
                   <span>{project._count?.listings || 0} properties</span>
                 </div>
-                {project.targetBudget && (
-                  <div className="flex items-center gap-1">
-                    <DollarSign size={12} />
-                    <span>{formatCurrency(project.targetBudget)} budget</span>
-                  </div>
-                )}
+                {project.targetBudget ? (
+                  <span className="text-[var(--text-tertiary)]">{formatCurrency(project.targetBudget)}</span>
+                ) : null}
               </div>
             </Link>
           ))}
