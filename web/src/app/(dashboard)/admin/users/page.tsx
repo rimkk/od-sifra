@@ -64,6 +64,8 @@ export default function UsersPage() {
   const [editLoading, setEditLoading] = useState(false);
 
   const isAdmin = user?.role === 'OWNER_ADMIN';
+  const isEmployee = user?.role === 'EMPLOYEE';
+  const canManageMembers = isAdmin || isEmployee;
 
   useEffect(() => {
     if (currentWorkspace) {
@@ -89,12 +91,21 @@ export default function UsersPage() {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentWorkspace) return;
+    if (!currentWorkspace) {
+      setAddError('No workspace selected');
+      return;
+    }
+    
+    if (!addForm.name.trim() || !addForm.email.trim()) {
+      setAddError('Name and email are required');
+      return;
+    }
     
     setAddError('');
     setAddLoading(true);
     
     try {
+      console.log('Adding member:', { workspaceId: currentWorkspace.id, ...addForm });
       const res = await workspaceApi.addMember(currentWorkspace.id, {
         name: addForm.name.trim(),
         email: addForm.email.trim().toLowerCase(),
@@ -102,6 +113,8 @@ export default function UsersPage() {
         role: addForm.role,
         password: addForm.password || undefined,
       });
+      
+      console.log('Add member response:', res.data);
       
       setAddSuccess({
         name: addForm.name,
@@ -111,7 +124,8 @@ export default function UsersPage() {
       setAddForm({ name: '', email: '', phone: '', role: 'CUSTOMER', password: '' });
       fetchData();
     } catch (err: any) {
-      setAddError(err.response?.data?.error || 'Failed to add member');
+      console.error('Add member error:', err.response?.data || err);
+      setAddError(err.response?.data?.error || err.message || 'Failed to add member');
     } finally {
       setAddLoading(false);
     }

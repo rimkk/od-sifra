@@ -200,26 +200,31 @@ router.delete('/:id/members/:userId', async (req: AuthRequest, res: Response) =>
 // Add member directly (create user if doesn't exist)
 router.post(
   '/:id/members',
+  authenticate,
   validate([
     param('id').isUUID(),
     body('email').isEmail().toLowerCase(),
     body('name').trim().notEmpty(),
     body('role').isIn(['EMPLOYEE', 'CUSTOMER']),
     body('phone').optional().trim(),
-    body('password').optional().isLength({ min: 6 }),
+    body('password').optional(),
   ]),
   async (req: AuthRequest, res: Response) => {
     try {
       const { id: workspaceId } = req.params;
       const { email, name, role, phone, password } = req.body;
 
+      console.log('Add member request:', { workspaceId, email, name, role, userId: req.user?.id });
+
       // Check workspace admin access
       const membership = await prisma.workspaceMember.findUnique({
         where: { workspaceId_userId: { workspaceId, userId: req.user!.id } },
       });
 
+      console.log('Current user membership:', membership);
+
       if (!membership) {
-        return res.status(403).json({ error: 'Access denied' });
+        return res.status(403).json({ error: 'Access denied - not a workspace member' });
       }
 
       // Only admins can add employees
@@ -313,6 +318,7 @@ router.post(
 // Update member role
 router.patch(
   '/:id/members/:userId',
+  authenticate,
   validate([
     param('id').isUUID(),
     param('userId').isUUID(),
@@ -372,7 +378,7 @@ router.patch(
 );
 
 // Get single member
-router.get('/:id/members/:userId', async (req: AuthRequest, res: Response) => {
+router.get('/:id/members/:userId', authenticate, async (req: AuthRequest, res: Response) => {
   try {
     const { id: workspaceId, userId } = req.params;
 
