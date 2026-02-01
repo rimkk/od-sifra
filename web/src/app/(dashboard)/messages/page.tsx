@@ -93,22 +93,23 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-[calc(100vh-3.5rem)] lg:h-screen flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold text-[var(--text)]">Messages</h1>
+      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-[var(--border)] bg-[var(--surface)]">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h1 className="text-base sm:text-lg font-semibold text-[var(--text)]">Messages</h1>
           <button
             onClick={() => setShowNewThread(true)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[var(--primary)] text-white text-xs sm:text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
           >
-            <Plus size={16} />
-            New Message
+            <Plus size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">New Message</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
 
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] sm:w-4 sm:h-4" />
           <input
             type="text"
             placeholder="Search conversations..."

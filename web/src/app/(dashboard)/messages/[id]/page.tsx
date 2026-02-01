@@ -115,27 +115,27 @@ export default function ThreadPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-[calc(100vh-3.5rem)] lg:h-screen flex flex-col">
       {/* Header */}
-      <div className="flex-shrink-0 p-4 border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="flex items-center gap-3">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-b border-[var(--border)] bg-[var(--surface)]">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => router.push('/messages')}
-            className="p-2 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)]"
+            className="p-1.5 sm:p-2 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] flex-shrink-0"
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-medium">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--primary)] flex items-center justify-center text-white font-medium flex-shrink-0">
               {thread.participantUsers[0]?.avatarUrl ? (
                 <img src={thread.participantUsers[0].avatarUrl} alt="" className="w-full h-full rounded-full" />
               ) : (
                 getThreadName().charAt(0)
               )}
             </div>
-            <div>
-              <p className="font-medium text-[var(--text)]">{getThreadName()}</p>
-              <p className="text-xs text-[var(--text-tertiary)]">
+            <div className="min-w-0">
+              <p className="font-medium text-sm sm:text-base text-[var(--text)] truncate">{getThreadName()}</p>
+              <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)]">
                 {thread.participantUsers.length} participants
               </p>
             </div>
@@ -144,7 +144,7 @@ export default function ThreadPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--background)]">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-[var(--background)]">
         {thread.messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <p className="text-sm text-[var(--text-tertiary)]">
@@ -159,12 +159,12 @@ export default function ThreadPage() {
             return (
               <div
                 key={msg.id}
-                className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
+                className={`flex gap-2 sm:gap-3 ${isOwn ? 'flex-row-reverse' : ''}`}
               >
                 {/* Avatar */}
-                <div className="w-8 flex-shrink-0">
+                <div className="w-7 sm:w-8 flex-shrink-0">
                   {showAvatar && !isOwn && (
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white text-xs sm:text-sm font-medium">
                       {msg.sender.avatarUrl ? (
                         <img src={msg.sender.avatarUrl} alt="" className="w-full h-full rounded-full" />
                       ) : (
@@ -175,20 +175,20 @@ export default function ThreadPage() {
                 </div>
 
                 {/* Message Bubble */}
-                <div className={`max-w-[70%] ${isOwn ? 'text-right' : ''}`}>
+                <div className={`max-w-[80%] sm:max-w-[70%] ${isOwn ? 'text-right' : ''}`}>
                   {showAvatar && !isOwn && (
-                    <p className="text-xs text-[var(--text-tertiary)] mb-1">{msg.sender.name}</p>
+                    <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] mb-1">{msg.sender.name}</p>
                   )}
                   <div
-                    className={`inline-block px-4 py-2 rounded-2xl ${
+                    className={`inline-block px-3 sm:px-4 py-2 rounded-2xl ${
                       isOwn
                         ? 'bg-[var(--primary)] text-white rounded-br-md'
                         : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text)] rounded-bl-md'
                     }`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <p className="text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
                   </div>
-                  <p className={`text-xs text-[var(--text-muted)] mt-1 ${isOwn ? 'text-right' : ''}`}>
+                  <p className={`text-[10px] sm:text-xs text-[var(--text-muted)] mt-1 ${isOwn ? 'text-right' : ''}`}>
                     {formatMessageDate(msg.createdAt)}
                   </p>
                 </div>
@@ -200,21 +200,21 @@ export default function ThreadPage() {
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0 p-4 border-t border-[var(--border)] bg-[var(--surface)]">
-        <form onSubmit={handleSend} className="flex items-center gap-3">
+      <div className="flex-shrink-0 p-3 sm:p-4 border-t border-[var(--border)] bg-[var(--surface)]">
+        <form onSubmit={handleSend} className="flex items-center gap-2 sm:gap-3">
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 h-10 px-4 rounded-full border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+            className="flex-1 h-9 sm:h-10 px-3 sm:px-4 rounded-full border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
           />
           <button
             type="submit"
             disabled={!message.trim() || sending}
-            className="w-10 h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[var(--primary)] text-white flex items-center justify-center hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 flex-shrink-0"
           >
-            {sending ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+            {sending ? <Loader2 size={16} className="animate-spin sm:w-[18px] sm:h-[18px]" /> : <Send size={16} className="sm:w-[18px] sm:h-[18px]" />}
           </button>
         </form>
       </div>

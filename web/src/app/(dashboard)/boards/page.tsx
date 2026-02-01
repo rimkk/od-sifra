@@ -92,42 +92,43 @@ export default function BoardsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--text)]">Boards</h1>
-          <p className="text-sm text-[var(--text-tertiary)] mt-0.5">
+          <h1 className="text-lg sm:text-xl font-semibold text-[var(--text)]">Boards</h1>
+          <p className="text-xs sm:text-sm text-[var(--text-tertiary)] mt-0.5">
             Manage your projects and tasks
           </p>
         </div>
         {canCreate && (
           <Link
             href="/boards/new"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--primary)] text-white text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-[var(--primary)] text-white text-xs sm:text-sm font-medium hover:bg-[var(--primary-hover)] transition-colors"
           >
-            <Plus size={16} />
-            New Board
+            <Plus size={14} className="sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">New Board</span>
+            <span className="sm:hidden">New</span>
           </Link>
         )}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] sm:w-4 sm:h-4" />
           <input
             type="text"
             placeholder="Search boards..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+            className="w-full h-9 sm:h-10 pl-9 sm:pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
           />
         </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+          className="h-9 sm:h-10 px-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] text-sm text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
         >
           <option value="all">All Types</option>
           <option value="GENERAL">General</option>
@@ -160,22 +161,22 @@ export default function BoardsPage() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filteredBoards.map((board) => (
             <div
               key={board.id}
               className="group bg-[var(--surface)] rounded-xl border border-[var(--border)] hover:border-[var(--primary)] transition-colors relative"
             >
-              <Link href={`/boards/${board.id}`} className="block p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className={`w-10 h-10 rounded-lg ${board.color || BOARD_TYPE_COLORS[board.type]} flex items-center justify-center text-white text-lg font-semibold`}>
+              <Link href={`/boards/${board.id}`} className="block p-3 sm:p-4">
+                <div className="flex items-start gap-3 mb-2 sm:mb-3">
+                  <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg ${board.color || BOARD_TYPE_COLORS[board.type]} flex items-center justify-center text-white text-base sm:text-lg font-semibold flex-shrink-0`}>
                     {board.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-[var(--text)] truncate group-hover:text-[var(--primary)]">
+                    <h3 className="font-medium text-sm sm:text-base text-[var(--text)] truncate group-hover:text-[var(--primary)]">
                       {board.name}
                     </h3>
-                    <p className="text-xs text-[var(--text-tertiary)]">
+                    <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)]">
                       {BOARD_TYPE_LABELS[board.type] || board.type}
                       {board.isPublic && ' • Public'}
                     </p>
@@ -183,12 +184,12 @@ export default function BoardsPage() {
                 </div>
 
                 {board.description && (
-                  <p className="text-sm text-[var(--text-secondary)] mb-3 line-clamp-2">
+                  <p className="text-xs sm:text-sm text-[var(--text-secondary)] mb-2 sm:mb-3 line-clamp-2">
                     {board.description}
                   </p>
                 )}
 
-                <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
+                <div className="flex items-center justify-between text-[10px] sm:text-xs text-[var(--text-tertiary)]">
                   <span>{board.taskCount} items</span>
                   <span>{board._count?.groups || 0} groups</span>
                 </div>

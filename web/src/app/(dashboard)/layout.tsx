@@ -18,6 +18,8 @@ import {
   Building2,
   Check,
   Loader2,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { cn } from '@/lib/utils';
@@ -28,6 +30,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, currentWorkspace, isInitialized, fetchUser, logout, setCurrentWorkspace } = useAuthStore();
   const [darkMode, setDarkMode] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     fetchUser();
@@ -46,6 +49,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       document.documentElement.classList.add('dark');
     }
   }, []);
+
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   const toggleDarkMode = () => {
     const newMode = !darkMode;
@@ -85,8 +93,45 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen bg-[var(--background)] flex">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between px-4 z-40">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+        >
+          <Menu size={20} />
+        </button>
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-[var(--primary)] flex items-center justify-center text-white text-sm font-semibold">
+            {currentWorkspace?.name.charAt(0) || 'W'}
+          </div>
+          <span className="font-medium text-sm text-[var(--text)]">{currentWorkspace?.name}</span>
+        </div>
+        <div className="w-10" /> {/* Spacer for centering */}
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col fixed h-screen">
+      <aside className={cn(
+        "w-60 flex-shrink-0 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col fixed h-screen z-50 transition-transform duration-200",
+        "lg:translate-x-0",
+        sidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        {/* Mobile Close Button */}
+        <button
+          onClick={() => setSidebarOpen(false)}
+          className="lg:hidden absolute top-3 right-3 p-2 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)]"
+        >
+          <X size={18} />
+        </button>
+
         {/* Workspace Selector */}
         <div className="p-3 border-b border-[var(--border)]">
           <div className="relative">
@@ -210,7 +255,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-60">{children}</main>
+      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0">{children}</main>
     </div>
   );
 }

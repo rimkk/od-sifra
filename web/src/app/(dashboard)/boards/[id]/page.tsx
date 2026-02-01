@@ -327,46 +327,60 @@ export default function BoardPage() {
   }));
 
   return (
-    <div className="h-screen flex flex-col bg-[var(--background)]">
+    <div className="h-[calc(100vh-3.5rem)] lg:h-screen flex flex-col bg-[var(--background)]">
       {/* Header */}
       <div className="flex-shrink-0 border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)]"
+              className="p-1.5 sm:p-2 rounded-lg text-[var(--text-tertiary)] hover:bg-[var(--surface-hover)] flex-shrink-0"
             >
               <ArrowLeft size={18} />
             </button>
-            <div>
-              <h1 className="text-lg font-semibold text-[var(--text)]">{board.name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-lg font-semibold text-[var(--text)] truncate">{board.name}</h1>
               {board.description && (
-                <p className="text-xs text-[var(--text-tertiary)]">{board.description}</p>
+                <p className="text-[10px] sm:text-xs text-[var(--text-tertiary)] truncate hidden sm:block">{board.description}</p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative hidden sm:block">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-48 h-8 pl-9 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
+                className="w-36 sm:w-48 h-8 pl-9 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20"
               />
             </div>
+          </div>
+        </div>
+        
+        {/* Mobile Search */}
+        <div className="sm:hidden px-3 pb-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-8 pl-9 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none"
+            />
           </div>
         </div>
       </div>
 
       {/* Board Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-2 sm:p-4">
         {filteredGroups.map((group) => (
-          <div key={group.id} className="mb-6">
+          <div key={group.id} className="mb-4 sm:mb-6">
             {/* Group Header */}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 px-1">
               <button
                 onClick={() => handleToggleCollapse(group)}
                 className="p-1 rounded hover:bg-[var(--surface-hover)]"
@@ -379,7 +393,7 @@ export default function BoardPage() {
               </button>
 
               <div
-                className="w-2 h-2 rounded-full"
+                className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ backgroundColor: group.color || 'var(--primary)' }}
               />
 
@@ -399,20 +413,20 @@ export default function BoardPage() {
               ) : (
                 <button
                   onClick={() => canEdit && setEditingGroup({ id: group.id, name: group.name })}
-                  className="text-sm font-medium text-[var(--text)] hover:text-[var(--primary)]"
+                  className="text-sm font-medium text-[var(--text)] hover:text-[var(--primary)] truncate"
                 >
                   {group.name}
                 </button>
               )}
 
-              <span className="text-xs text-[var(--text-muted)]">
+              <span className="text-xs text-[var(--text-muted)] flex-shrink-0">
                 {group.tasks.length} items
               </span>
 
               {canEdit && (
                 <button
                   onClick={() => handleDeleteGroup(group.id)}
-                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--surface-hover)] ml-auto"
+                  className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--surface-hover)] ml-auto flex-shrink-0"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -422,124 +436,126 @@ export default function BoardPage() {
             {/* Table */}
             {!group.collapsed && (
               <div className="border border-[var(--border)] rounded-lg overflow-hidden bg-[var(--surface)]">
-                {/* Header Row */}
-                <div className="flex items-center border-b border-[var(--border)] bg-[var(--surface-hover)]">
-                  <div className="w-8 flex-shrink-0" />
-                  <div className="flex-1 min-w-[200px] px-3 py-2 text-xs font-medium text-[var(--text-tertiary)]">
-                    Item
-                  </div>
-                  {board.columns.map((col) => (
-                    <div
-                      key={col.id}
-                      style={{ width: col.width || 150 }}
-                      className="flex-shrink-0 px-2 py-2 text-xs font-medium text-[var(--text-tertiary)] border-l border-[var(--border)]"
-                    >
-                      {col.name}
+                <div className="overflow-x-auto">
+                  {/* Header Row */}
+                  <div className="flex items-center border-b border-[var(--border)] bg-[var(--surface-hover)] min-w-max">
+                    <div className="w-6 sm:w-8 flex-shrink-0" />
+                    <div className="w-[140px] sm:w-[200px] flex-shrink-0 px-2 sm:px-3 py-2 text-[10px] sm:text-xs font-medium text-[var(--text-tertiary)]">
+                      Item
                     </div>
-                  ))}
-                  <div className="w-10 flex-shrink-0" />
-                </div>
-
-                {/* Task Rows */}
-                {group.tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="flex items-center border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--surface-hover)] group"
-                  >
-                    <div className="w-8 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <GripVertical size={14} className="text-[var(--text-muted)]" />
-                    </div>
-
-                    {/* Task Name */}
-                    <div className="flex-1 min-w-[200px] px-3 py-2">
-                      {editingTask?.taskId === task.id ? (
-                        <input
-                          type="text"
-                          value={editingTask.name}
-                          onChange={(e) => setEditingTask({ ...editingTask, name: e.target.value })}
-                          onBlur={() => handleUpdateTask(task.id, { name: editingTask.name })}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleUpdateTask(task.id, { name: editingTask.name });
-                            if (e.key === 'Escape') setEditingTask(null);
-                          }}
-                          autoFocus
-                          className="w-full px-2 py-1 text-sm bg-transparent border border-[var(--primary)] rounded focus:outline-none"
-                        />
-                      ) : (
-                        <button
-                          onClick={() => canEdit && setEditingTask({ groupId: group.id, taskId: task.id, name: task.name })}
-                          className="text-sm text-[var(--text)] hover:text-[var(--primary)] text-left"
-                        >
-                          {task.name}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Field Cells */}
                     {board.columns.map((col) => (
                       <div
                         key={col.id}
-                        style={{ width: col.width || 150 }}
-                        className="flex-shrink-0 h-9 border-l border-[var(--border)]"
+                        style={{ width: Math.max(100, (col.width || 150) * 0.8) }}
+                        className="flex-shrink-0 px-2 py-2 text-[10px] sm:text-xs font-medium text-[var(--text-tertiary)] border-l border-[var(--border)] sm:w-auto"
                       >
-                        {renderCell(task, col)}
+                        {col.name}
                       </div>
                     ))}
+                    <div className="w-8 sm:w-10 flex-shrink-0" />
+                  </div>
 
-                    {/* Actions */}
-                    <div className="w-10 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      {canEdit && (
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--surface-hover)]"
+                  {/* Task Rows */}
+                  {group.tasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center border-b border-[var(--border)] last:border-b-0 hover:bg-[var(--surface-hover)] group min-w-max"
+                    >
+                      <div className="w-6 sm:w-8 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <GripVertical size={12} className="text-[var(--text-muted)] sm:w-3.5 sm:h-3.5" />
+                      </div>
+
+                      {/* Task Name */}
+                      <div className="w-[140px] sm:w-[200px] flex-shrink-0 px-2 sm:px-3 py-2">
+                        {editingTask?.taskId === task.id ? (
+                          <input
+                            type="text"
+                            value={editingTask.name}
+                            onChange={(e) => setEditingTask({ ...editingTask, name: e.target.value })}
+                            onBlur={() => handleUpdateTask(task.id, { name: editingTask.name })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleUpdateTask(task.id, { name: editingTask.name });
+                              if (e.key === 'Escape') setEditingTask(null);
+                            }}
+                            autoFocus
+                            className="w-full px-2 py-1 text-xs sm:text-sm bg-transparent border border-[var(--primary)] rounded focus:outline-none"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => canEdit && setEditingTask({ groupId: group.id, taskId: task.id, name: task.name })}
+                            className="text-xs sm:text-sm text-[var(--text)] hover:text-[var(--primary)] text-left truncate w-full"
+                          >
+                            {task.name}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Field Cells */}
+                      {board.columns.map((col) => (
+                        <div
+                          key={col.id}
+                          style={{ width: Math.max(100, (col.width || 150) * 0.8) }}
+                          className="flex-shrink-0 h-8 sm:h-9 border-l border-[var(--border)]"
                         >
-                          <Trash2 size={14} />
+                          {renderCell(task, col)}
+                        </div>
+                      ))}
+
+                      {/* Actions */}
+                      <div className="w-8 sm:w-10 flex-shrink-0 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        {canEdit && (
+                          <button
+                            onClick={() => handleDeleteTask(task.id)}
+                            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--surface-hover)]"
+                          >
+                            <Trash2 size={12} className="sm:w-3.5 sm:h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add Task Row */}
+                  {canEdit && (
+                    <div className="flex items-center min-w-max">
+                      <div className="w-6 sm:w-8 flex-shrink-0" />
+                      {addingTask === group.id ? (
+                        <div className="flex-1 px-2 sm:px-3 py-2 flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={newTaskName}
+                            onChange={(e) => setNewTaskName(e.target.value)}
+                            onBlur={() => handleAddTask(group.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleAddTask(group.id);
+                              if (e.key === 'Escape') {
+                                setNewTaskName('');
+                                setAddingTask(null);
+                              }
+                            }}
+                            placeholder="Enter item name..."
+                            autoFocus
+                            className="flex-1 min-w-[120px] px-2 py-1 text-xs sm:text-sm bg-transparent border border-[var(--primary)] rounded focus:outline-none"
+                          />
+                          <button
+                            onClick={() => { setNewTaskName(''); setAddingTask(null); }}
+                            className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAddingTask(group.id)}
+                          className="flex-1 px-2 sm:px-3 py-2 text-xs sm:text-sm text-[var(--text-muted)] hover:text-[var(--text)] text-left flex items-center gap-2"
+                        >
+                          <Plus size={14} />
+                          Add item
                         </button>
                       )}
                     </div>
-                  </div>
-                ))}
-
-                {/* Add Task Row */}
-                {canEdit && (
-                  <div className="flex items-center">
-                    <div className="w-8 flex-shrink-0" />
-                    {addingTask === group.id ? (
-                      <div className="flex-1 px-3 py-2 flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={newTaskName}
-                          onChange={(e) => setNewTaskName(e.target.value)}
-                          onBlur={() => handleAddTask(group.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleAddTask(group.id);
-                            if (e.key === 'Escape') {
-                              setNewTaskName('');
-                              setAddingTask(null);
-                            }
-                          }}
-                          placeholder="Enter item name..."
-                          autoFocus
-                          className="flex-1 px-2 py-1 text-sm bg-transparent border border-[var(--primary)] rounded focus:outline-none"
-                        />
-                        <button
-                          onClick={() => { setNewTaskName(''); setAddingTask(null); }}
-                          className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--surface-hover)]"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setAddingTask(group.id)}
-                        className="flex-1 px-3 py-2 text-sm text-[var(--text-muted)] hover:text-[var(--text)] text-left flex items-center gap-2"
-                      >
-                        <Plus size={14} />
-                        Add item
-                      </button>
-                    )}
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
           </div>
