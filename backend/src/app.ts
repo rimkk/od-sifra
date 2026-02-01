@@ -3,6 +3,7 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
+import bcrypt from 'bcryptjs';
 
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
@@ -16,6 +17,34 @@ import customerAccountRoutes from './routes/customerAccounts';
 import { errorHandler } from './middleware/errorHandler';
 import { setupSocketHandlers } from './socket/handlers';
 import { prisma } from './lib/prisma';
+
+// Auto-seed admin user on startup
+async function seedAdminUser() {
+  try {
+    const adminEmail = 'moria.mann97@gmail.com';
+    const existingAdmin = await prisma.user.findUnique({
+      where: { email: adminEmail },
+    });
+
+    if (!existingAdmin) {
+      console.log('🌱 Creating admin user...');
+      const passwordHash = await bcrypt.hash('1234567', 12);
+      await prisma.user.create({
+        data: {
+          email: adminEmail,
+          passwordHash,
+          name: 'Moria Mann',
+          role: 'ADMIN',
+        },
+      });
+      console.log('✅ Admin user created:', adminEmail);
+    } else {
+      console.log('✅ Admin user already exists:', adminEmail);
+    }
+  } catch (error) {
+    console.error('⚠️ Could not seed admin user:', error);
+  }
+}
 
 dotenv.config();
 
@@ -62,9 +91,12 @@ app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`🚀 Od Sifra API running on port ${PORT}`);
   console.log(`📡 Socket.io ready for connections`);
+  
+  // Seed admin user on startup
+  await seedAdminUser();
 });
 
 // Graceful shutdown
