@@ -25,9 +25,11 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Copy package files and install production dependencies
+# Copy package files
 COPY package*.json ./
-RUN npm install --omit=dev
+
+# Copy node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy built application
 COPY --from=builder /app/.next ./.next
