@@ -18,7 +18,7 @@ permissions:
 
 env:
   REGISTRY: odsifra.jfrog.io
-  IMAGE_NAME: od-sifra-web
+  IMAGE_NAME: docker/od-sifra-web
 
 jobs:
   test:
