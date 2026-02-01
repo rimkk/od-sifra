@@ -1,80 +1,74 @@
 import { Router, Response } from 'express';
-import { param, query } from 'express-validator';
-import { validate } from '../middleware/validate';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { notificationService } from '../services/notification.service';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
-// Get notifications
-router.get(
-  '/',
-  authenticate,
-  validate([
-    query('page').optional().isInt({ min: 1 }),
-    query('limit').optional().isInt({ min: 1, max: 100 }),
-  ]),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+router.use(authenticate);
 
-      const result = await notificationService.getNotifications(req.user!.id, page, limit);
-      res.json(result);
-    } catch (error: any) {
-      res.status(error.statusCode || 500).json({ error: error.message });
-    }
-  }
-);
-
-// Mark notification as read
-router.put(
-  '/:id/read',
-  authenticate,
-  validate([param('id').isUUID().withMessage('Invalid notification ID')]),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const notification = await notificationService.markAsRead(req.params.id, req.user!.id);
-      res.json({ notification });
-    } catch (error: any) {
-      res.status(error.statusCode || 500).json({ error: error.message });
-    }
-  }
-);
-
-// Mark all as read
-router.put('/read-all', authenticate, async (req: AuthRequest, res: Response) => {
+// Get user's notifications
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    await notificationService.markAllAsRead(req.user!.id);
-    res.json({ message: 'All notifications marked as read' });
+    const { unreadOnly } = req.query;
+
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId: req.user!.id,
+        ...(unreadOnly === 'true' && { isRead: false }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+
+    const unreadCount = await prisma.notification.count({
+      where: { userId: req.user!.id, isRead: false },
+    });
+
+    res.json({ notifications, unreadCount });
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
-// Get unread count
-router.get('/unread-count', authenticate, async (req: AuthRequest, res: Response) => {
+// Mark as read
+router.post('/:id/read', async (req: AuthRequest, res: Response) => {
   try {
-    const count = await notificationService.getUnreadCount(req.user!.id);
-    res.json({ unreadCount: count });
+    await prisma.notification.update({
+      where: { id: req.params.id, userId: req.user!.id },
+      data: { isRead: true },
+    });
+
+    res.json({ success: true });
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark all as read
+router.post('/read-all', async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.notification.updateMany({
+      where: { userId: req.user!.id, isRead: false },
+      data: { isRead: true },
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
 // Delete notification
-router.delete(
-  '/:id',
-  authenticate,
-  validate([param('id').isUUID().withMessage('Invalid notification ID')]),
-  async (req: AuthRequest, res: Response) => {
-    try {
-      await notificationService.deleteNotification(req.params.id, req.user!.id);
-      res.json({ message: 'Notification deleted' });
-    } catch (error: any) {
-      res.status(error.statusCode || 500).json({ error: error.message });
-    }
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.notification.delete({
+      where: { id: req.params.id, userId: req.user!.id },
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
-);
+});
 
 export default router;

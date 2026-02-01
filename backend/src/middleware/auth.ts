@@ -3,47 +3,42 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
 import { UserRole } from '@prisma/client';
 
-export interface AuthUser {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
 export interface AuthRequest extends Request {
-  user?: AuthUser;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role: UserRole;
+  };
 }
 
 export const authenticate = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Access token required' });
+      res.status(401).json({ error: 'No token provided' });
+      return;
     }
 
-    const token = authHeader.split(' ')[1];
-    const secret = process.env.JWT_SECRET || 'default-secret';
+    const token = authHeader.substring(7);
 
-    const decoded = jwt.verify(token, secret) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isActive: true,
-      },
+      select: { id: true, email: true, name: true, role: true, isActive: true },
     });
 
     if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'User not found or inactive' });
+      res.status(401).json({ error: 'User not found or inactive' });
+      return;
     }
 
     req.user = {
@@ -55,30 +50,22 @@ export const authenticate = async (
 
     next();
   } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return res.status(401).json({ error: 'Token expired' });
-    }
-    if (error instanceof jwt.JsonWebTokenError) {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
-    return res.status(500).json({ error: 'Authentication failed' });
+    res.status(401).json({ error: 'Invalid token' });
   }
 };
 
 export const authorize = (...roles: UserRole[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      res.status(401).json({ error: 'Not authenticated' });
+      return;
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
+      res.status(403).json({ error: 'Insufficient permissions' });
+      return;
     }
 
     next();
   };
 };
-
-export const isAdmin = authorize(UserRole.ADMIN);
-export const isEmployee = authorize(UserRole.ADMIN, UserRole.EMPLOYEE);
-export const isCustomer = authorize(UserRole.CUSTOMER);

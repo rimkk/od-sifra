@@ -1,44 +1,60 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Lock, User, CheckCircle, Info } from 'lucide-react';
-import { Button, Input } from '@/components/ui';
-import { useAuthStore } from '@/store/auth';
-import { invitationApi } from '@/lib/api';
+import { Mail, Lock, User, Info, CheckCircle, Loader2 } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth';
+import { inviteApi } from '@/lib/api';
 
-function RegisterForm() {
+interface Invite {
+  id: string;
+  email: string;
+  role: string;
+  workspace: { id: string; name: string; logoUrl?: string };
+  invitedBy: { name: string };
+}
+
+export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
-  const { register } = useAuthStore();
-
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [validating, setValidating] = useState(!!token);
-  const [invitation, setInvitation] = useState<{ email: string; role: string; inviterName: string } | null>(null);
-  const [error, setError] = useState('');
+  const { register, isLoading, user, isInitialized, fetchUser } = useAuthStore();
+  
+  const inviteToken = searchParams.get('invite');
+  const [invite, setInvite] = useState<Invite | null>(null);
+  const [loadingInvite, setLoadingInvite] = useState(!!inviteToken);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
 
   useEffect(() => {
-    if (token) {
-      validateInvitation();
+    if (inviteToken) {
+      loadInvite();
     }
-  }, [token]);
+    fetchUser();
+  }, [inviteToken]);
 
-  const validateInvitation = async () => {
+  useEffect(() => {
+    if (isInitialized && user) {
+      router.replace('/dashboard');
+    }
+  }, [isInitialized, user, router]);
+
+  const loadInvite = async () => {
     try {
-      const response = await invitationApi.validate(token!);
-      setInvitation(response.data.invitation);
-      setEmail(response.data.invitation.email);
+      const res = await inviteApi.getByToken(inviteToken!);
+      setInvite(res.data.invite);
+      setForm((f) => ({ ...f, email: res.data.invite.email }));
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Invalid or expired invitation');
+      setError(err.response?.data?.error || 'Invalid or expired invite');
     } finally {
-      setValidating(false);
+      setLoadingInvite(false);
     }
   };
 
@@ -46,40 +62,38 @@ function RegisterForm() {
     e.preventDefault();
     setError('');
 
-    if (password !== confirmPassword) {
+    if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
 
-    setLoading(true);
-
     try {
-      const result = await register({ email, password, name, invitationToken: token || undefined });
-      
-      if (token) {
+      await register({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        inviteToken: inviteToken || undefined,
+      });
+
+      if (invite) {
         router.push('/dashboard');
       } else {
         setSuccess(true);
       }
     } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setError(err.response?.data?.error || 'Registration failed');
     }
   };
 
-  if (validating) {
+  if (loadingInvite) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="relative w-10 h-10">
-          <div className="absolute inset-0 rounded-full border-2 border-[var(--border)]" />
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--primary)] animate-spin" />
-        </div>
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
       </div>
     );
   }
@@ -88,17 +102,18 @@ function RegisterForm() {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--background)]">
         <div className="w-full max-w-sm text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--success-light)] flex items-center justify-center">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--success-light)] flex items-center justify-center">
             <CheckCircle className="w-6 h-6 text-[var(--success)]" />
           </div>
           <h1 className="text-lg font-semibold text-[var(--text)] mb-2">Account Created</h1>
           <p className="text-sm text-[var(--text-secondary)] mb-6">
-            Your account is pending approval. You&apos;ll be notified once approved.
+            Your account is pending approval. You&apos;ll be notified once an admin approves your access.
           </p>
-          <Link href="/login">
-            <Button variant="outline" className="w-full">
-              Back to Sign In
-            </Button>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center w-full h-10 rounded-lg border border-[var(--border)] text-[var(--text)] font-medium text-sm hover:bg-[var(--surface-hover)] transition-colors"
+          >
+            Back to Sign In
           </Link>
         </div>
       </div>
@@ -110,79 +125,113 @@ function RegisterForm() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="Od Sifra" className="w-12 h-12 mx-auto mb-4 rounded-xl" />
+          {invite?.workspace?.logoUrl ? (
+            <img src={invite.workspace.logoUrl} alt={invite.workspace.name} className="w-12 h-12 mx-auto mb-4 rounded-xl" />
+          ) : (
+            <img src="/logo.png" alt="Od Sifra" className="w-12 h-12 mx-auto mb-4 rounded-xl" />
+          )}
           <h1 className="text-xl font-semibold text-[var(--text)]">
-            {invitation ? 'Complete Registration' : 'Create an account'}
+            {invite ? 'Complete Registration' : 'Create an account'}
           </h1>
           <p className="text-sm text-[var(--text-tertiary)] mt-1">
-            {invitation ? `Invited by ${invitation.inviterName}` : 'Sign up to get started'}
+            {invite ? `Join ${invite.workspace.name}` : 'Sign up to get started'}
           </p>
         </div>
 
         {/* Form */}
         <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-[var(--error-light)] text-[var(--error)] text-sm">
+            <div className="mb-4 p-3 rounded-lg bg-[var(--error-light)] text-sm text-[var(--error)]">
               {error}
             </div>
           )}
 
-          {!invitation && (
+          {invite && (
+            <div className="mb-4 p-3 rounded-lg bg-[var(--primary)]/10 text-sm text-[var(--primary)]">
+              Invited by {invite.invitedBy.name} as {invite.role.toLowerCase().replace('_', ' ')}
+            </div>
+          )}
+
+          {!invite && (
             <div className="mb-4 p-3 rounded-lg bg-[var(--surface-hover)] text-xs text-[var(--text-secondary)] flex items-start gap-2">
               <Info size={14} className="flex-shrink-0 mt-0.5" />
-              <span>Account requires admin approval</span>
+              <span>Self-registration requires admin approval before you can access the workspace.</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Name"
-              type="text"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              icon={<User size={16} />}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Full Name</label>
+              <div className="relative">
+                <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="John Doe"
+                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                  required
+                />
+              </div>
+            </div>
 
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              icon={<Mail size={16} />}
-              disabled={!!invitation}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Email</label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  placeholder="you@example.com"
+                  disabled={!!invite}
+                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] disabled:opacity-50"
+                  required
+                />
+              </div>
+            </div>
 
-            <Input
-              label="Password"
-              type="password"
-              placeholder="Min. 8 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              icon={<Lock size={16} />}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                  required
+                />
+              </div>
+            </div>
 
-            <Input
-              label="Confirm Password"
-              type="password"
-              placeholder="Confirm password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              icon={<Lock size={16} />}
-              required
-            />
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+                <input
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                  placeholder="••••••••"
+                  className="w-full h-10 pl-10 pr-4 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)]"
+                  required
+                />
+              </div>
+            </div>
 
-            <Button type="submit" className="w-full" loading={loading}>
-              {invitation ? 'Create Account' : 'Request Access'}
-            </Button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-10 rounded-lg bg-[var(--primary)] text-white font-medium text-sm hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 flex items-center justify-center"
+            >
+              {isLoading ? <Loader2 size={16} className="animate-spin" /> : (invite ? 'Create Account' : 'Request Access')}
+            </button>
           </form>
         </div>
 
-        <p className="mt-6 text-center text-sm text-[var(--text-tertiary)]">
+        <p className="text-center text-sm text-[var(--text-tertiary)] mt-6">
           Already have an account?{' '}
           <Link href="/login" className="text-[var(--primary)] hover:underline">
             Sign in
@@ -190,24 +239,5 @@ function RegisterForm() {
         </p>
       </div>
     </div>
-  );
-}
-
-function RegisterLoading() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-      <div className="relative w-10 h-10">
-        <div className="absolute inset-0 rounded-full border-2 border-[var(--border)]" />
-        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--primary)] animate-spin" />
-      </div>
-    </div>
-  );
-}
-
-export default function RegisterPage() {
-  return (
-    <Suspense fallback={<RegisterLoading />}>
-      <RegisterForm />
-    </Suspense>
   );
 }

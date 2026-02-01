@@ -3,56 +3,19 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
 
 import authRoutes from './routes/auth.routes';
-import userRoutes from './routes/user.routes';
-import propertyRoutes from './routes/property.routes';
-import renovationRoutes from './routes/renovation.routes';
-import messageRoutes from './routes/message.routes';
+import workspaceRoutes from './routes/workspace.routes';
+import boardRoutes from './routes/board.routes';
+import groupRoutes from './routes/group.routes';
+import columnRoutes from './routes/column.routes';
+import taskRoutes from './routes/task.routes';
+import inviteRoutes from './routes/invite.routes';
+import threadRoutes from './routes/thread.routes';
 import notificationRoutes from './routes/notification.routes';
-import adminRoutes from './routes/admin.routes';
-import invitationRoutes from './routes/invitation.routes';
-import customerAccountRoutes from './routes/customerAccounts';
-import projectRoutes from './routes/project.routes';
-import listingRoutes from './routes/listing.routes';
-import contractorRoutes from './routes/contractor.routes';
-import renovationTaskRoutes from './routes/renovation-task.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { setupSocketHandlers } from './socket/handlers';
 import { prisma } from './lib/prisma';
-
-// Auto-seed admin user on startup
-async function seedAdminUser() {
-  try {
-    const adminEmail = 'moria.mann97@gmail.com';
-    const passwordHash = await bcrypt.hash('1234567', 12);
-    
-    // Use upsert to create or update admin user
-    const admin = await prisma.user.upsert({
-      where: { email: adminEmail },
-      update: {
-        passwordHash,
-        name: 'Moria Mann',
-        role: 'ADMIN',
-        isActive: true,
-        approvalStatus: 'APPROVED',
-      },
-      create: {
-        email: adminEmail,
-        passwordHash,
-        name: 'Moria Mann',
-        role: 'ADMIN',
-        isActive: true,
-        approvalStatus: 'APPROVED',
-        approvedAt: new Date(),
-      },
-    });
-    console.log('✅ Admin user ready:', admin.email);
-  } catch (error) {
-    console.error('⚠️ Could not seed admin user:', error);
-  }
-}
 
 dotenv.config();
 
@@ -79,18 +42,14 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/properties', propertyRoutes);
-app.use('/api/renovations', renovationRoutes);
-app.use('/api/messages', messageRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/boards', boardRoutes);
+app.use('/api/groups', groupRoutes);
+app.use('/api/columns', columnRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/invites', inviteRoutes);
+app.use('/api/threads', threadRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/invitations', invitationRoutes);
-app.use('/api/customer-accounts', customerAccountRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/listings', listingRoutes);
-app.use('/api/contractors', contractorRoutes);
-app.use('/api/renovation-tasks', renovationTaskRoutes);
 
 // Error handler
 app.use(errorHandler);
@@ -103,22 +62,8 @@ app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, async () => {
-  console.log(`🚀 Od Sifra API running on port ${PORT}`);
-  console.log(`📡 Socket.io ready for connections`);
-  
-  // Seed admin user on startup
-  await seedAdminUser();
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await prisma.$disconnect();
-  httpServer.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
-
-export { app, io };
+export { app, httpServer, io };

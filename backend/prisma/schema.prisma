@@ -1,5 +1,3 @@
-// Prisma schema for Od Sifra Property Management App
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,593 +7,413 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User roles enum
+// ============================================
+// ENUMS
+// ============================================
+
 enum UserRole {
-  ADMIN
-  EMPLOYEE
-  CUSTOMER
+  OWNER_ADMIN  // Company owner, full access
+  EMPLOYEE     // Company employee
+  CUSTOMER     // External customer, limited access
 }
 
-// Property status enum (for owned properties)
-enum PropertyStatus {
-  ACTIVE
-  VACANT
-  RENOVATION
-  SOLD
-}
-
-// Project stage type (like Monday.com columns)
-enum StageType {
-  SEARCHING       // Initial research
-  VIEWING         // Property viewings scheduled/done
-  CONSIDERING     // Under consideration
-  OFFER_MADE      // Offer submitted
-  UNDER_CONTRACT  // Contract signed
-  CLOSING         // In closing process
-  PURCHASED       // Property purchased
-  MANAGING        // Active management
-}
-
-// Task status
-enum TaskStatus {
-  TODO
-  IN_PROGRESS
-  DONE
-  BLOCKED
-}
-
-// Task priority
-enum TaskPriority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
-// Activity type for tracking changes
-enum ActivityType {
-  PROPERTY_ADDED
-  PROPERTY_MOVED
-  PROPERTY_UPDATED
-  TASK_CREATED
-  TASK_COMPLETED
-  VISIT_SCHEDULED
-  VISIT_COMPLETED
-  NOTE_ADDED
-  DOCUMENT_UPLOADED
-  STATUS_CHANGED
-  COMMENT_ADDED
-  PROJECT_CREATED
-  PROJECT_REMOVED
-}
-
-// Project status
-enum ProjectStatus {
-  ACTIVE
-  ON_HOLD
-  COMPLETED
-  ARCHIVED
-}
-
-// Renovation status enum
-enum RenovationStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
   CANCELLED
 }
 
-// Notification type enum
+enum BoardType {
+  GENERAL
+  PROPERTY    // Property management template
+  PROJECT     // Project template
+  CRM         // Customer relationship template
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  STATUS
+  PERSON
+  MONEY
+  FILE
+  CHECKBOX
+  DROPDOWN
+  LINK
+  EMAIL
+  PHONE
+  RATING
+  TIMELINE
+}
+
 enum NotificationType {
-  STATUS_CHANGE
-  VISIT_SCHEDULED
-  VISIT_COMPLETED
-  MESSAGE
-  RENOVATION_UPDATE
-  SYSTEM
-  USER_PENDING_APPROVAL
-  PROPERTY_UPDATE
   TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_COMMENT
+  MESSAGE_RECEIVED
+  INVITE_RECEIVED
+  BOARD_SHARED
+  MENTION
 }
 
-// User approval status
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
+enum OccupancyStatus {
+  VACANT
+  OCCUPIED
+  RENOVATION
 }
 
-// Customer Account model - shared account for multiple users (e.g., husband & wife)
-model CustomerAccount {
-  id          String   @id @default(uuid())
-  name        String   // Account name (e.g., "Smith Family")
-  description String?
-  phone       String?
-  email       String?  // Primary contact email
-  ownerId     String?  @map("owner_id") // Account manager (Admin/Employee)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+enum Currency {
+  USD
+  ILS
+  EUR
+  GBP
+}
+
+// ============================================
+// CORE MODELS
+// ============================================
+
+// Workspace: Multi-tenant container
+model Workspace {
+  id            String    @id @default(uuid())
+  name          String
+  slug          String    @unique
+  description   String?
+  logoUrl       String?   @map("logo_url")
+  defaultCurrency Currency @default(USD) @map("default_currency")
+  settings      Json?     // Store workspace-specific settings
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  users       User[]
-  properties  Property[]
-  assignments CustomerAssignment[]
-  projects    Project[]
+  members       WorkspaceMember[]
+  boards        Board[]
+  invites       Invite[]
+  messageThreads MessageThread[]
 
-  @@map("customer_accounts")
+  @@map("workspaces")
 }
 
-// Project model - Like a Monday.com board for property acquisition
-model Project {
-  id                String        @id @default(uuid())
-  customerAccountId String        @map("customer_account_id")
-  name              String        // e.g., "Miami Investment Properties"
-  description       String?
-  status            ProjectStatus @default(ACTIVE)
-  ownerId           String?       @map("owner_id") // Project manager (Admin/Employee)
-  targetBudget      Decimal?      @map("target_budget") @db.Decimal(14, 2)
-  targetProperties  Int?          @map("target_properties")
-  startDate         DateTime?     @map("start_date")
-  targetEndDate     DateTime?     @map("target_end_date")
-  isActive          Boolean       @default(true) @map("is_active")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
-
-  // Relations
-  customerAccount   CustomerAccount   @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
-  listings          PropertyListing[]
-  activities        Activity[]
-
-  @@map("projects")
-}
-
-// PropertyListing - Properties being tracked in a project (board items)
-model PropertyListing {
-  id              String    @id @default(uuid())
-  projectId       String    @map("project_id")
-  stage           StageType @default(SEARCHING)
-  orderIndex      Int       @default(0) @map("order_index")
-  
-  // Property details
-  address         String
-  city            String
-  state           String?
-  zipCode         String?   @map("zip_code")
-  country         String    @default("USA")
-  
-  // Financials
-  askingPrice     Decimal?  @map("asking_price") @db.Decimal(14, 2)
-  offerPrice      Decimal?  @map("offer_price") @db.Decimal(14, 2)
-  purchasePrice   Decimal?  @map("purchase_price") @db.Decimal(14, 2)
-  estimatedRent   Decimal?  @map("estimated_rent") @db.Decimal(10, 2)
-  actualRent      Decimal?  @map("actual_rent") @db.Decimal(10, 2)
-  closingCosts    Decimal?  @map("closing_costs") @db.Decimal(10, 2)
-  renovationCost  Decimal?  @map("renovation_cost") @db.Decimal(10, 2)
-  
-  // Property info
-  propertyType    String?   @map("property_type") // Single Family, Multi-Family, Condo, etc.
-  bedrooms        Int?
-  bathrooms       Decimal?  @db.Decimal(3, 1)
-  sqft            Int?
-  yearBuilt       Int?      @map("year_built")
-  lotSize         Decimal?  @map("lot_size") @db.Decimal(10, 2)
-  
-  // Links & media
-  listingUrl      String?   @map("listing_url")
-  imageUrl        String?   @map("image_url")
-  images          String[]  @default([])
-  
-  // Status tracking
-  viewingDate     DateTime? @map("viewing_date")
-  offerDate       DateTime? @map("offer_date")
-  contractDate    DateTime? @map("contract_date")
-  closingDate     DateTime? @map("closing_date")
-  
-  // Tenant info (after purchase)
-  tenantName      String?   @map("tenant_name")
-  tenantEmail     String?   @map("tenant_email")
-  tenantPhone     String?   @map("tenant_phone")
-  leaseStart      DateTime? @map("lease_start")
-  leaseEnd        DateTime? @map("lease_end")
-  
-  // Notes
-  notes           String?
-  
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks           Task[]
-  comments        Comment[]
-  documents       Document[]
-
-  @@index([projectId, stage])
-  @@map("property_listings")
-}
-
-// Task model - Tasks associated with property listings
-model Task {
-  id                String       @id @default(uuid())
-  propertyListingId String       @map("property_listing_id")
-  title             String
-  description       String?
-  status            TaskStatus   @default(TODO)
-  priority          TaskPriority @default(MEDIUM)
-  dueDate           DateTime?    @map("due_date")
-  completedAt       DateTime?    @map("completed_at")
-  assignedToId      String?      @map("assigned_to_id")
-  createdAt         DateTime     @default(now()) @map("created_at")
-  updatedAt         DateTime     @updatedAt @map("updated_at")
-
-  // Relations
-  propertyListing   PropertyListing @relation(fields: [propertyListingId], references: [id], onDelete: Cascade)
-
-  @@map("tasks")
-}
-
-// Comment model - Comments on property listings
-model Comment {
-  id                String   @id @default(uuid())
-  propertyListingId String   @map("property_listing_id")
-  userId            String   @map("user_id")
-  content           String
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  propertyListing   PropertyListing @relation(fields: [propertyListingId], references: [id], onDelete: Cascade)
-
-  @@map("comments")
-}
-
-// Document model - Documents attached to property listings
-model Document {
-  id                String   @id @default(uuid())
-  propertyListingId String   @map("property_listing_id")
-  name              String
-  url               String
-  type              String?  // PDF, Image, Contract, etc.
-  size              Int?     // File size in bytes
-  createdAt         DateTime @default(now()) @map("created_at")
-
-  // Relations
-  propertyListing   PropertyListing @relation(fields: [propertyListingId], references: [id], onDelete: Cascade)
-
-  @@map("documents")
-}
-
-// Activity model - Activity feed for projects
-model Activity {
-  id          String       @id @default(uuid())
-  projectId   String       @map("project_id")
-  userId      String?      @map("user_id")
-  type        ActivityType
-  title       String
-  description String?
-  metadata    Json?        // Extra data like property ID, old/new values
-  createdAt   DateTime     @default(now()) @map("created_at")
-
-  // Relations
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId, createdAt])
-  @@map("activities")
-}
-
-// User model
+// User
 model User {
-  id              String         @id @default(uuid())
-  email           String         @unique
-  passwordHash    String         @map("password_hash")
-  name            String
-  phone           String?
-  role            UserRole       @default(CUSTOMER)
-  avatarUrl       String?        @map("avatar_url")
-  isActive        Boolean        @default(true) @map("is_active")
-  approvalStatus  ApprovalStatus @default(PENDING) @map("approval_status")
-  approvedAt      DateTime?      @map("approved_at")
-  approvedById    String?        @map("approved_by_id")
-  lastLoginAt     DateTime?      @map("last_login_at")
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String
+  avatarUrl     String?   @map("avatar_url")
+  phone         String?
+  role          UserRole  @default(CUSTOMER)
+  isActive      Boolean   @default(true) @map("is_active")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  invitedById       String?   @map("invited_by_id")
-  invitedBy         User?     @relation("UserInvitations", fields: [invitedById], references: [id])
-  invitedUsers      User[]    @relation("UserInvitations")
-  
-  // Customer account (for CUSTOMER role users - multiple users can share one account)
-  customerAccountId String?   @map("customer_account_id")
-  customerAccount   CustomerAccount? @relation(fields: [customerAccountId], references: [id])
-  
-  sentMessages      Message[] @relation("SentMessages")
-  receivedMessages  Message[] @relation("ReceivedMessages")
-  notifications     Notification[]
-  createdInvitations Invitation[]
-  pushTokens        PushToken[]
-  
-  // Employee-Customer assignments (now on CustomerAccount level)
-  assignedAccounts   CustomerAssignment[] @relation("EmployeeAssignments")
+  workspaces    WorkspaceMember[]
+  assignedTasks TaskAssignment[]
+  comments      Comment[]
+  activities    ActivityLog[]
+  sentMessages  Message[] @relation("SentMessages")
+  notifications Notification[]
+  createdInvites Invite[] @relation("CreatedInvites")
+  createdBoards Board[] @relation("CreatedBoards")
+  createdTasks  Task[] @relation("CreatedTasks")
 
   @@map("users")
 }
 
-// Customer Account to Employee assignment
-model CustomerAssignment {
-  id                String   @id @default(uuid())
-  customerAccountId String   @unique @map("customer_account_id")
-  employeeId        String   @map("employee_id")
-  assignedAt        DateTime @default(now()) @map("assigned_at")
-
-  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
-  employee          User            @relation("EmployeeAssignments", fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@map("customer_assignments")
-}
-
-// Property model
-model Property {
-  id                String         @id @default(uuid())
-  customerAccountId String         @map("customer_account_id")
-  address           String
-  city              String
-  postalCode        String?        @map("postal_code")
-  country           String         @default("Croatia")
-  description       String?
-  purchaseCost      Decimal        @map("purchase_cost") @db.Decimal(12, 2)
-  monthlyRent       Decimal        @map("monthly_rent") @db.Decimal(10, 2)
-  tenantName        String?        @map("tenant_name")
-  tenantEmail       String?        @map("tenant_email")
-  tenantPhone       String?        @map("tenant_phone")
-  rentalStart       DateTime?      @map("rental_start")
-  rentalEnd         DateTime?      @map("rental_end")
-  status            PropertyStatus @default(VACANT)
-  imageUrl          String?        @map("image_url")
-  notes             String?
-  createdAt         DateTime       @default(now()) @map("created_at")
-  updatedAt         DateTime       @updatedAt @map("updated_at")
-
-  // Relations
-  customerAccount   CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
-  renovations       Renovation[]
-  visits            Visit[]
-
-  @@map("properties")
-}
-
-// Contractor/Team member model
-model Contractor {
-  id          String   @id @default(uuid())
-  name        String
-  email       String?
-  phone       String?
-  company     String?
-  specialty   String?  // Plumbing, Electrical, General, etc.
-  hourlyRate  Decimal? @map("hourly_rate") @db.Decimal(8, 2)
-  notes       String?
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  tasks       RenovationTask[]
-  timeEntries TimeEntry[]
-
-  @@map("contractors")
-}
-
-// Renovation model (Project)
-model Renovation {
-  id          String           @id @default(uuid())
-  propertyId  String           @map("property_id")
-  title       String
-  description String?
-  status      RenovationStatus @default(PLANNED)
-  priority    String?          @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  budget      Decimal?         @db.Decimal(10, 2)
-  actualCost  Decimal?         @map("actual_cost") @db.Decimal(10, 2)
-  startDate   DateTime?        @map("start_date")
-  endDate     DateTime?        @map("end_date")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
-
-  // Relations
-  property    Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  steps       RenovationStep[]
-  tasks       RenovationTask[]
-
-  @@map("renovations")
-}
-
-// Renovation step model (legacy - phases)
-model RenovationStep {
-  id            String           @id @default(uuid())
-  renovationId  String           @map("renovation_id")
-  title         String
-  description   String?
-  status        RenovationStatus @default(PLANNED)
-  orderIndex    Int              @default(0) @map("order_index")
-  dueDate       DateTime?        @map("due_date")
-  completedAt   DateTime?        @map("completed_at")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-
-  // Relations
-  renovation    Renovation       @relation(fields: [renovationId], references: [id], onDelete: Cascade)
-
-  @@map("renovation_steps")
-}
-
-// Renovation Task model (Monday.com style items)
-model RenovationTask {
-  id            String           @id @default(uuid())
-  renovationId  String           @map("renovation_id")
-  contractorId  String?          @map("contractor_id")
-  title         String
-  description   String?
-  status        RenovationStatus @default(PLANNED)
-  priority      String           @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
-  category      String?          // Plumbing, Electrical, Flooring, Painting, etc.
-  
-  // Financials
-  estimatedCost Decimal?         @map("estimated_cost") @db.Decimal(10, 2)
-  actualCost    Decimal?         @map("actual_cost") @db.Decimal(10, 2)
-  laborCost     Decimal?         @map("labor_cost") @db.Decimal(10, 2)
-  materialCost  Decimal?         @map("material_cost") @db.Decimal(10, 2)
-  
-  // Time tracking
-  estimatedHours Decimal?        @map("estimated_hours") @db.Decimal(6, 2)
-  actualHours    Decimal?        @map("actual_hours") @db.Decimal(6, 2)
-  
-  // Progress
-  progress      Int              @default(0) // 0-100
-  
-  // Dates
-  startDate     DateTime?        @map("start_date")
-  dueDate       DateTime?        @map("due_date")
-  completedAt   DateTime?        @map("completed_at")
-  
-  orderIndex    Int              @default(0) @map("order_index")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-
-  // Relations
-  renovation    Renovation       @relation(fields: [renovationId], references: [id], onDelete: Cascade)
-  contractor    Contractor?      @relation(fields: [contractorId], references: [id])
-  materials     MaterialItem[]
-  timeEntries   TimeEntry[]
-
-  @@index([renovationId, status])
-  @@map("renovation_tasks")
-}
-
-// Material items for tasks
-model MaterialItem {
-  id          String          @id @default(uuid())
-  taskId      String          @map("task_id")
-  name        String
-  quantity    Decimal         @db.Decimal(10, 2)
-  unit        String?         // pcs, sqft, gallon, etc.
-  unitPrice   Decimal         @map("unit_price") @db.Decimal(10, 2)
-  totalPrice  Decimal         @map("total_price") @db.Decimal(10, 2)
-  isPurchased Boolean         @default(false) @map("is_purchased")
-  purchasedAt DateTime?       @map("purchased_at")
-  notes       String?
-  createdAt   DateTime        @default(now()) @map("created_at")
-
-  // Relations
-  task        RenovationTask  @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@map("material_items")
-}
-
-// Time entries for tracking work hours
-model TimeEntry {
-  id            String         @id @default(uuid())
-  taskId        String         @map("task_id")
-  contractorId  String?        @map("contractor_id")
-  hours         Decimal        @db.Decimal(6, 2)
-  date          DateTime
-  description   String?
-  hourlyRate    Decimal?       @map("hourly_rate") @db.Decimal(8, 2)
-  totalCost     Decimal?       @map("total_cost") @db.Decimal(10, 2)
-  createdAt     DateTime       @default(now()) @map("created_at")
-
-  // Relations
-  task          RenovationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  contractor    Contractor?    @relation(fields: [contractorId], references: [id])
-
-  @@map("time_entries")
-}
-
-// Visit model (for property visits/inspections)
-model Visit {
+// Workspace membership (many-to-many with role context)
+model WorkspaceMember {
   id          String    @id @default(uuid())
-  propertyId  String    @map("property_id")
-  title       String
+  workspaceId String    @map("workspace_id")
+  userId      String    @map("user_id")
+  role        UserRole  @default(CUSTOMER)
+  joinedAt    DateTime  @default(now()) @map("joined_at")
+  isActive    Boolean   @default(true) @map("is_active")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// Invite
+model Invite {
+  id          String       @id @default(uuid())
+  workspaceId String       @map("workspace_id")
+  email       String
+  role        UserRole     @default(CUSTOMER)
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  invitedById String       @map("invited_by_id")
+  expiresAt   DateTime     @map("expires_at")
+  acceptedAt  DateTime?    @map("accepted_at")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User         @relation("CreatedInvites", fields: [invitedById], references: [id])
+
+  @@index([email, status])
+  @@map("invites")
+}
+
+// ============================================
+// BOARD MODELS (Monday-like)
+// ============================================
+
+// Board
+model Board {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  createdById String    @map("created_by_id")
+  name        String
   description String?
-  scheduledAt DateTime  @map("scheduled_at")
-  completedAt DateTime? @map("completed_at")
-  notes       String?
+  type        BoardType @default(GENERAL)
+  color       String?   // Board accent color
+  icon        String?   // Icon identifier
+  isTemplate  Boolean   @default(false) @map("is_template")
+  isPublic    Boolean   @default(false) @map("is_public") // Visible to all workspace members
+  settings    Json?     // Board-specific settings
+  isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  // Relations
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("CreatedBoards", fields: [createdById], references: [id])
+  groups      Group[]
+  columns     Column[]
+  boardMembers BoardMember[]
 
-  @@map("visits")
+  @@index([workspaceId, isActive])
+  @@map("boards")
 }
 
-// Message model
+// Board membership (who can see/edit the board)
+model BoardMember {
+  id        String   @id @default(uuid())
+  boardId   String   @map("board_id")
+  userId    String   @map("user_id")
+  canEdit   Boolean  @default(true) @map("can_edit")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@map("board_members")
+}
+
+// Group (row groups in Monday)
+model Group {
+  id        String   @id @default(uuid())
+  boardId   String   @map("board_id")
+  name      String
+  color     String?
+  position  Int      @default(0)
+  collapsed Boolean  @default(false)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+
+  @@index([boardId, position])
+  @@map("groups")
+}
+
+// Column (defines field types for the board)
+model Column {
+  id          String    @id @default(uuid())
+  boardId     String    @map("board_id")
+  name        String
+  type        FieldType
+  width       Int?      @default(150)
+  position    Int       @default(0)
+  settings    Json?     // Type-specific settings (e.g., dropdown options, status colors)
+  isRequired  Boolean   @default(false) @map("is_required")
+  isVisible   Boolean   @default(true) @map("is_visible")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  board       Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  values      TaskFieldValue[]
+
+  @@index([boardId, position])
+  @@map("columns")
+}
+
+// Task (items/rows)
+model Task {
+  id          String    @id @default(uuid())
+  groupId     String    @map("group_id")
+  createdById String    @map("created_by_id")
+  name        String
+  position    Int       @default(0)
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  group       Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("CreatedTasks", fields: [createdById], references: [id])
+  fieldValues TaskFieldValue[]
+  assignments TaskAssignment[]
+  comments    Comment[]
+  activities  ActivityLog[]
+  subTasks    SubTask[]
+
+  @@index([groupId, position])
+  @@map("tasks")
+}
+
+// Task field values (stores actual data for each column)
+model TaskFieldValue {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  columnId  String   @map("column_id")
+  value     Json     // Flexible value storage
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  column    Column   @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, columnId])
+  @@map("task_field_values")
+}
+
+// Sub-tasks (checklist items)
+model SubTask {
+  id          String    @id @default(uuid())
+  taskId      String    @map("task_id")
+  name        String
+  isCompleted Boolean   @default(false) @map("is_completed")
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("sub_tasks")
+}
+
+// Task assignments
+model TaskAssignment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@map("task_assignments")
+}
+
+// ============================================
+// COMMENTS & ACTIVITY
+// ============================================
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String   @map("task_id")
+  userId    String   @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+  @@map("comments")
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  taskId    String?  @map("task_id")
+  userId    String   @map("user_id")
+  action    String   // 'created', 'updated', 'moved', 'assigned', etc.
+  details   Json?    // Additional context
+  createdAt DateTime @default(now()) @map("created_at")
+
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([taskId, createdAt])
+  @@map("activity_logs")
+}
+
+// ============================================
+// MESSAGING
+// ============================================
+
+model MessageThread {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  title       String?
+  isGroup     Boolean   @default(false) @map("is_group")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  participants ThreadParticipant[]
+  messages    Message[]
+
+  @@map("message_threads")
+}
+
+model ThreadParticipant {
+  id        String   @id @default(uuid())
+  threadId  String   @map("thread_id")
+  userId    String   @map("user_id")
+  lastReadAt DateTime? @map("last_read_at")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@unique([threadId, userId])
+  @@map("thread_participants")
+}
+
 model Message {
-  id          String   @id @default(uuid())
-  senderId    String   @map("sender_id")
-  receiverId  String   @map("receiver_id")
-  content     String
-  isRead      Boolean  @default(false) @map("is_read")
-  readAt      DateTime? @map("read_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id        String   @id @default(uuid())
+  threadId  String   @map("thread_id")
+  senderId  String   @map("sender_id")
+  content   String
+  isEdited  Boolean  @default(false) @map("is_edited")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  // Relations
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  thread    MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender    User          @relation("SentMessages", fields: [senderId], references: [id])
 
-  @@index([senderId, receiverId])
-  @@index([receiverId, isRead])
+  @@index([threadId, createdAt])
   @@map("messages")
 }
 
-// Notification model
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
 model Notification {
   id        String           @id @default(uuid())
   userId    String           @map("user_id")
-  title     String
-  body      String
   type      NotificationType
-  metadata  Json?
+  title     String
+  message   String?
+  link      String?          // URL to navigate to
   isRead    Boolean          @default(false) @map("is_read")
-  readAt    DateTime?        @map("read_at")
+  data      Json?            // Additional context
   createdAt DateTime         @default(now()) @map("created_at")
 
-  // Relations
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, isRead])
+  @@index([userId, isRead, createdAt])
   @@map("notifications")
-}
-
-// Invitation model
-model Invitation {
-  id                String   @id @default(uuid())
-  inviterId         String   @map("inviter_id")
-  email             String
-  role              UserRole
-  customerAccountId String?  @map("customer_account_id") // For linking to existing customer account
-  token             String   @unique
-  expiresAt         DateTime @map("expires_at")
-  usedAt            DateTime? @map("used_at")
-  createdAt         DateTime @default(now()) @map("created_at")
-
-  // Relations
-  inviter           User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-
-  @@index([token])
-  @@index([email])
-  @@map("invitations")
-}
-
-// Push notification tokens
-model PushToken {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  token     String   @unique
-  platform  String   // ios, android
-  createdAt DateTime @default(now()) @map("created_at")
-
-  // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("push_tokens")
 }
