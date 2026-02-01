@@ -35,6 +35,44 @@ router.post('/reset-admin-password', async (_req: Request, res: Response) => {
   }
 });
 
+// Debug login (temporary)
+router.post('/debug-login', async (req: Request, res: Response) => {
+  try {
+    const bcrypt = await import('bcryptjs');
+    const { email, password } = req.body;
+    const normalizedEmail = email?.toLowerCase();
+    
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+    
+    if (!user) {
+      return res.json({ 
+        step: 'user_lookup', 
+        error: 'User not found',
+        receivedEmail: email,
+        normalizedEmail,
+      });
+    }
+    
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    
+    res.json({
+      step: 'password_check',
+      receivedEmail: email,
+      normalizedEmail,
+      userFound: true,
+      userEmail: user.email,
+      isActive: user.isActive,
+      passwordValid: isValid,
+      passwordLength: password?.length,
+      hashPrefix: user.passwordHash.substring(0, 10),
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Register
 router.post(
   '/register',
