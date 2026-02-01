@@ -56,6 +56,12 @@ export const workspaceApi = {
     api.post('/workspaces', data),
   update: (id: string, data: any) => api.patch(`/workspaces/${id}`, data),
   getMembers: (id: string) => api.get(`/workspaces/${id}/members`),
+  getMember: (workspaceId: string, userId: string) =>
+    api.get(`/workspaces/${workspaceId}/members/${userId}`),
+  addMember: (workspaceId: string, data: { email: string; name: string; role: string; phone?: string; password?: string }) =>
+    api.post(`/workspaces/${workspaceId}/members`, data),
+  updateMember: (workspaceId: string, userId: string, data: { role?: string }) =>
+    api.patch(`/workspaces/${workspaceId}/members/${userId}`, data),
   removeMember: (workspaceId: string, userId: string) =>
     api.delete(`/workspaces/${workspaceId}/members/${userId}`),
 };

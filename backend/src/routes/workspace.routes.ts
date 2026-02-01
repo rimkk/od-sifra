@@ -4,6 +4,7 @@ import { validate } from '../middleware/validate';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { UserRole } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const router = Router();
 
@@ -191,6 +192,211 @@ router.delete('/:id/members/:userId', async (req: AuthRequest, res: Response) =>
     });
 
     res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add member directly (create user if doesn't exist)
+router.post(
+  '/:id/members',
+  validate([
+    param('id').isUUID(),
+    body('email').isEmail().toLowerCase(),
+    body('name').trim().notEmpty(),
+    body('role').isIn(['EMPLOYEE', 'CUSTOMER']),
+    body('phone').optional().trim(),
+    body('password').optional().isLength({ min: 6 }),
+  ]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { id: workspaceId } = req.params;
+      const { email, name, role, phone, password } = req.body;
+
+      // Check workspace admin access
+      const membership = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId, userId: req.user!.id } },
+      });
+
+      if (!membership) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+
+      // Only admins can add employees
+      if (role === UserRole.EMPLOYEE && membership.role !== UserRole.OWNER_ADMIN) {
+        return res.status(403).json({ error: 'Only admins can add employees' });
+      }
+
+      // Customers can't add anyone
+      if (membership.role === UserRole.CUSTOMER) {
+        return res.status(403).json({ error: 'Customers cannot add members' });
+      }
+
+      // Check if user already exists
+      let user = await prisma.user.findUnique({ where: { email } });
+
+      if (user) {
+        // Check if already a member
+        const existingMember = await prisma.workspaceMember.findUnique({
+          where: { workspaceId_userId: { workspaceId, userId: user.id } },
+        });
+
+        if (existingMember && existingMember.isActive) {
+          return res.status(400).json({ error: 'User is already a member of this workspace' });
+        }
+
+        // Re-activate if was deactivated
+        if (existingMember && !existingMember.isActive) {
+          await prisma.workspaceMember.update({
+            where: { workspaceId_userId: { workspaceId, userId: user.id } },
+            data: { isActive: true, role: role as UserRole },
+          });
+        } else {
+          // Add to workspace
+          await prisma.workspaceMember.create({
+            data: {
+              workspaceId,
+              userId: user.id,
+              role: role as UserRole,
+            },
+          });
+        }
+      } else {
+        // Create new user
+        const passwordHash = await bcrypt.hash(password || 'Welcome123!', 12);
+        
+        user = await prisma.user.create({
+          data: {
+            email,
+            name,
+            phone,
+            passwordHash,
+            role: role as UserRole,
+            emailVerified: true, // Admin-created accounts are pre-verified
+            workspaces: {
+              create: { workspaceId, role: role as UserRole },
+            },
+          },
+        });
+      }
+
+      // Fetch the member with user details
+      const member = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId, userId: user.id } },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true, role: true } },
+        },
+      });
+
+      // Create notification for the new member
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: 'SYSTEM',
+          title: 'Welcome!',
+          message: `You have been added to workspace by ${req.user!.name}`,
+          link: '/dashboard',
+        },
+      });
+
+      res.status(201).json({ 
+        member,
+        isNewUser: !user.passwordHash || password ? true : false,
+        temporaryPassword: !user.passwordHash ? 'Welcome123!' : undefined,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Update member role
+router.patch(
+  '/:id/members/:userId',
+  validate([
+    param('id').isUUID(),
+    param('userId').isUUID(),
+    body('role').optional().isIn(['EMPLOYEE', 'CUSTOMER']),
+  ]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { id: workspaceId, userId } = req.params;
+      const { role } = req.body;
+
+      // Check admin access
+      const membership = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId, userId: req.user!.id } },
+      });
+
+      if (!membership || membership.role !== UserRole.OWNER_ADMIN) {
+        return res.status(403).json({ error: 'Admin access required' });
+      }
+
+      // Can't change your own role
+      if (userId === req.user!.id) {
+        return res.status(400).json({ error: "Can't change your own role" });
+      }
+
+      const targetMember = await prisma.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId, userId } },
+      });
+
+      if (!targetMember) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+
+      // Can't demote another admin
+      if (targetMember.role === UserRole.OWNER_ADMIN) {
+        return res.status(400).json({ error: "Can't change an admin's role" });
+      }
+
+      const updated = await prisma.workspaceMember.update({
+        where: { workspaceId_userId: { workspaceId, userId } },
+        data: { role: role as UserRole },
+        include: {
+          user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true, role: true } },
+        },
+      });
+
+      // Also update user's global role
+      await prisma.user.update({
+        where: { id: userId },
+        data: { role: role as UserRole },
+      });
+
+      res.json({ member: updated });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Get single member
+router.get('/:id/members/:userId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id: workspaceId, userId } = req.params;
+
+    // Check workspace access
+    const membership = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId: req.user!.id } },
+    });
+
+    if (!membership) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const member = await prisma.workspaceMember.findUnique({
+      where: { workspaceId_userId: { workspaceId, userId } },
+      include: {
+        user: { select: { id: true, name: true, email: true, avatarUrl: true, phone: true, role: true } },
+      },
+    });
+
+    if (!member) {
+      return res.status(404).json({ error: 'Member not found' });
+    }
+
+    res.json({ member });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

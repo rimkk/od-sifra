@@ -144,6 +144,16 @@ router.get(
         where: { workspaceId },
         include: { invitedBy: { select: { name: true } } },
         orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          status: true,
+          token: true,
+          createdAt: true,
+          expiresAt: true,
+          invitedBy: { select: { name: true } },
+        },
       });
 
       res.json({ invites });
