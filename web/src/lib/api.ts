@@ -90,6 +90,11 @@ export const adminApi = {
   getCustomers: (page = 1) => api.get(`/admin/customers?page=${page}`),
   getCustomerDetails: (id: string) => api.get(`/admin/customers/${id}`),
   getEmployees: (page = 1) => api.get(`/admin/employees?page=${page}`),
+  createEmployee: (data: { email: string; password: string; name: string; phone?: string }) =>
+    api.post('/admin/employees', data),
+  updateEmployee: (id: string, data: { name?: string; phone?: string; isActive?: boolean }) =>
+    api.patch(`/admin/employees/${id}`, data),
+  deleteEmployee: (id: string) => api.delete(`/admin/employees/${id}`),
   assignCustomer: (customerId: string, employeeId: string) =>
     api.post('/admin/assign-customer', { customerId, employeeId }),
   toggleUserStatus: (id: string) => api.put(`/admin/users/${id}/toggle-status`),
