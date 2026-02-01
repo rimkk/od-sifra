@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../lib/prisma';
-import { UserRole } from '@prisma/client';
+import { UserRole, ApprovalStatus, NotificationType } from '@prisma/client';
 import { AppError } from '../middleware/errorHandler';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret';
@@ -37,6 +37,7 @@ export const authService = {
     let role: UserRole = UserRole.CUSTOMER;
     let inviterId: string | null = null;
     let customerAccountId: string | null = null;
+    let approvalStatus: ApprovalStatus = ApprovalStatus.PENDING;
 
     // Handle invitation-based registration
     if (invitationToken) {
@@ -63,6 +64,7 @@ export const authService = {
       role = invitation.role;
       inviterId = invitation.inviterId;
       customerAccountId = invitation.customerAccountId;
+      approvalStatus = ApprovalStatus.APPROVED; // Invited users are auto-approved
 
       // Mark invitation as used
       await prisma.invitation.update({
@@ -84,6 +86,9 @@ export const authService = {
         role,
         invitedById: inviterId,
         customerAccountId: customerAccountId,
+        approvalStatus,
+        approvedAt: approvalStatus === ApprovalStatus.APPROVED ? new Date() : null,
+        approvedById: inviterId, // If invited, the inviter is the approver
       },
     });
 
@@ -108,7 +113,36 @@ export const authService = {
       }
     }
 
-    // Generate tokens
+    // If self-registered (pending), notify admins
+    if (approvalStatus === ApprovalStatus.PENDING) {
+      const admins = await prisma.user.findMany({
+        where: { role: UserRole.ADMIN, isActive: true },
+      });
+
+      // Create notification for each admin
+      await prisma.notification.createMany({
+        data: admins.map((admin) => ({
+          userId: admin.id,
+          title: 'New User Pending Approval',
+          body: `${name} (${email}) has requested access to the platform.`,
+          type: NotificationType.USER_PENDING_APPROVAL,
+          metadata: { userId: user.id, userName: name, userEmail: email },
+        })),
+      });
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          approvalStatus: user.approvalStatus,
+        },
+        pendingApproval: true,
+      };
+    }
+
+    // Generate tokens only for approved users
     const accessToken = this.generateToken(user.id);
 
     return {
@@ -117,8 +151,10 @@ export const authService = {
         email: user.email,
         name: user.name,
         role: user.role,
+        approvalStatus: user.approvalStatus,
       },
       accessToken,
+      pendingApproval: false,
     };
   },
 
@@ -135,6 +171,15 @@ export const authService = {
 
     if (!user.isActive) {
       throw new AppError('Account is deactivated', 401);
+    }
+
+    // Check approval status
+    if (user.approvalStatus === ApprovalStatus.PENDING) {
+      throw new AppError('Your account is pending approval', 403);
+    }
+
+    if (user.approvalStatus === ApprovalStatus.REJECTED) {
+      throw new AppError('Your account access was denied', 403);
     }
 
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
@@ -158,6 +203,7 @@ export const authService = {
         name: user.name,
         role: user.role,
         avatarUrl: user.avatarUrl,
+        approvalStatus: user.approvalStatus,
       },
       accessToken,
     };
@@ -186,6 +232,8 @@ export const authService = {
         passwordHash,
         name,
         role: UserRole.ADMIN,
+        approvalStatus: ApprovalStatus.APPROVED,
+        approvedAt: new Date(),
       },
     });
 

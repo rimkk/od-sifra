@@ -32,22 +32,22 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <img 
-            src="/logo.png" 
-            alt="Od Sifra" 
-            className="w-20 h-20 mx-auto mb-4 rounded-2xl"
-          />
-          <h1 className="text-3xl font-bold text-[var(--text)]">Od Sifra</h1>
-          <p className="text-[var(--text-secondary)] mt-1">Property Management</p>
+          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
+            <img 
+              src="/logo.png" 
+              alt="Od Sifra" 
+              className="w-12 h-12 rounded-lg"
+            />
+          </div>
+          <h1 className="text-2xl font-semibold text-[var(--text)]">Welcome back</h1>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Sign in to your account</p>
         </div>
 
         {/* Form */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 shadow-sm">
-          <h2 className="text-xl font-semibold text-[var(--text)] mb-6">Sign in to your account</h2>
-
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
           {error && (
             <div className="mb-4 p-3 rounded-lg bg-[var(--error-bg)] text-[var(--error)] text-sm">
               {error}
@@ -58,10 +58,10 @@ export default function LoginPage() {
             <Input
               label="Email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              icon={<Mail size={18} />}
+              icon={<Mail size={16} />}
               required
             />
 
@@ -71,30 +71,20 @@ export default function LoginPage() {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              icon={<Lock size={18} />}
+              icon={<Lock size={16} />}
               required
             />
 
             <Button type="submit" className="w-full" loading={loading}>
-              Sign In
+              Sign in
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm">
-            <span className="text-[var(--text-secondary)]">Have an invitation? </span>
-            <Link href="/register" className="text-secondary font-medium hover:underline">
-              Create Account
+          <div className="mt-6 pt-6 border-t border-[var(--border)] text-center text-sm">
+            <span className="text-[var(--text-secondary)]">Don&apos;t have an account? </span>
+            <Link href="/register" className="text-primary font-medium hover:underline">
+              Sign up
             </Link>
-          </div>
-        </div>
-
-        {/* Demo credentials */}
-        <div className="mt-6 p-4 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)]">
-          <p className="text-sm font-medium text-[var(--text)] mb-2">Demo Credentials</p>
-          <div className="text-xs text-[var(--text-secondary)] space-y-1">
-            <p>Admin: moria.mann97@gmail.com / 1234567</p>
-            <p>Employee: employee@odsifra.com / employee123</p>
-            <p>Customer: customer@odsifra.com / customer123</p>
           </div>
         </div>
       </div>

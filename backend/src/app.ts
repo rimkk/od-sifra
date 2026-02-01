@@ -32,6 +32,7 @@ async function seedAdminUser() {
         name: 'Moria Mann',
         role: 'ADMIN',
         isActive: true,
+        approvalStatus: 'APPROVED',
       },
       create: {
         email: adminEmail,
@@ -39,6 +40,8 @@ async function seedAdminUser() {
         name: 'Moria Mann',
         role: 'ADMIN',
         isActive: true,
+        approvalStatus: 'APPROVED',
+        approvedAt: new Date(),
       },
     });
     console.log('✅ Admin user ready:', admin.email);

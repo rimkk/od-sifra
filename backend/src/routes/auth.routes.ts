@@ -3,75 +3,8 @@ import { body } from 'express-validator';
 import { validate } from '../middleware/validate';
 import { authService } from '../services/auth.service';
 import { authenticate, AuthRequest } from '../middleware/auth';
-import { prisma } from '../lib/prisma';
 
 const router = Router();
-
-// Debug endpoint to check admin user
-router.get('/debug-admin', async (_req: Request, res: Response) => {
-  try {
-    const admin = await prisma.user.findUnique({
-      where: { email: 'moria.mann97@gmail.com' },
-      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true, updatedAt: true },
-    });
-    res.json({ adminExists: !!admin, admin, serverTime: new Date().toISOString() });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Reset admin password (temporary - remove after fixing)
-router.post('/reset-admin-password', async (_req: Request, res: Response) => {
-  try {
-    const bcrypt = await import('bcryptjs');
-    const passwordHash = await bcrypt.hash('1234567', 12);
-    const admin = await prisma.user.update({
-      where: { email: 'moria.mann97@gmail.com' },
-      data: { passwordHash },
-    });
-    res.json({ success: true, message: 'Admin password reset', email: admin.email });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Debug login (temporary)
-router.post('/debug-login', async (req: Request, res: Response) => {
-  try {
-    const bcrypt = await import('bcryptjs');
-    const { email, password } = req.body;
-    const normalizedEmail = email?.toLowerCase();
-    
-    const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-    
-    if (!user) {
-      return res.json({ 
-        step: 'user_lookup', 
-        error: 'User not found',
-        receivedEmail: email,
-        normalizedEmail,
-      });
-    }
-    
-    const isValid = await bcrypt.compare(password, user.passwordHash);
-    
-    res.json({
-      step: 'password_check',
-      receivedEmail: email,
-      normalizedEmail,
-      userFound: true,
-      userEmail: user.email,
-      isActive: user.isActive,
-      passwordValid: isValid,
-      passwordLength: password?.length,
-      hashPrefix: user.passwordHash.substring(0, 10),
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Register
 router.post(

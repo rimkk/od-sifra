@@ -40,6 +40,14 @@ enum NotificationType {
   MESSAGE
   RENOVATION_UPDATE
   SYSTEM
+  USER_PENDING_APPROVAL
+}
+
+// User approval status
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 // Customer Account model - shared account for multiple users (e.g., husband & wife)
@@ -61,17 +69,20 @@ model CustomerAccount {
 
 // User model
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String   @map("password_hash")
-  name          String
-  phone         String?
-  role          UserRole @default(CUSTOMER)
-  avatarUrl     String?  @map("avatar_url")
-  isActive      Boolean  @default(true) @map("is_active")
-  lastLoginAt   DateTime? @map("last_login_at")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              String         @id @default(uuid())
+  email           String         @unique
+  passwordHash    String         @map("password_hash")
+  name            String
+  phone           String?
+  role            UserRole       @default(CUSTOMER)
+  avatarUrl       String?        @map("avatar_url")
+  isActive        Boolean        @default(true) @map("is_active")
+  approvalStatus  ApprovalStatus @default(PENDING) @map("approval_status")
+  approvedAt      DateTime?      @map("approved_at")
+  approvedById    String?        @map("approved_by_id")
+  lastLoginAt     DateTime?      @map("last_login_at")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   // Relations
   invitedById       String?   @map("invited_by_id")

@@ -68,6 +68,11 @@ export const userApi = {
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.put('/users/me/password', data),
   getContacts: () => api.get('/users/contacts'),
+  // Admin user management
+  getPending: () => api.get('/users/pending'),
+  getAll: () => api.get('/users/all'),
+  approve: (userId: string) => api.post(`/users/${userId}/approve`),
+  reject: (userId: string) => api.post(`/users/${userId}/reject`),
 };
 
 // Invitation API

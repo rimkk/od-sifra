@@ -1,8 +1,9 @@
 import { Router, Response } from 'express';
-import { body } from 'express-validator';
+import { body, param } from 'express-validator';
 import { validate } from '../middleware/validate';
-import { authenticate, AuthRequest } from '../middleware/auth';
+import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
+import { UserRole, ApprovalStatus, NotificationType } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
@@ -256,5 +257,157 @@ router.get('/contacts', authenticate, async (req: AuthRequest, res: Response) =>
     res.status(500).json({ error: error.message });
   }
 });
+
+// Get pending users (Admin only)
+router.get(
+  '/pending',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const pendingUsers = await prisma.user.findMany({
+        where: { approvalStatus: ApprovalStatus.PENDING },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.json({ users: pendingUsers });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Approve user (Admin only)
+router.post(
+  '/:userId/approve',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  validate([param('userId').isUUID().withMessage('Invalid user ID')]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.approvalStatus !== ApprovalStatus.PENDING) {
+        return res.status(400).json({ error: 'User is not pending approval' });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          approvalStatus: ApprovalStatus.APPROVED,
+          approvedAt: new Date(),
+          approvedById: req.user!.id,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          approvalStatus: true,
+        },
+      });
+
+      // Notify the user
+      await prisma.notification.create({
+        data: {
+          userId: userId,
+          title: 'Account Approved',
+          body: 'Your account has been approved. You can now sign in.',
+          type: NotificationType.SYSTEM,
+        },
+      });
+
+      res.json({ user: updatedUser, message: 'User approved successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Reject user (Admin only)
+router.post(
+  '/:userId/reject',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  validate([param('userId').isUUID().withMessage('Invalid user ID')]),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.approvalStatus !== ApprovalStatus.PENDING) {
+        return res.status(400).json({ error: 'User is not pending approval' });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          approvalStatus: ApprovalStatus.REJECTED,
+          approvedById: req.user!.id,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          approvalStatus: true,
+        },
+      });
+
+      res.json({ user: updatedUser, message: 'User rejected' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Get all users (Admin only)
+router.get(
+  '/all',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const users = await prisma.user.findMany({
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          approvalStatus: true,
+          createdAt: true,
+          lastLoginAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.json({ users });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
 
 export default router;
