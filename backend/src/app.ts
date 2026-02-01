@@ -22,25 +22,26 @@ import { prisma } from './lib/prisma';
 async function seedAdminUser() {
   try {
     const adminEmail = 'moria.mann97@gmail.com';
-    const existingAdmin = await prisma.user.findUnique({
+    const passwordHash = await bcrypt.hash('1234567', 12);
+    
+    // Use upsert to create or update admin user
+    const admin = await prisma.user.upsert({
       where: { email: adminEmail },
+      update: {
+        passwordHash,
+        name: 'Moria Mann',
+        role: 'ADMIN',
+        isActive: true,
+      },
+      create: {
+        email: adminEmail,
+        passwordHash,
+        name: 'Moria Mann',
+        role: 'ADMIN',
+        isActive: true,
+      },
     });
-
-    if (!existingAdmin) {
-      console.log('🌱 Creating admin user...');
-      const passwordHash = await bcrypt.hash('1234567', 12);
-      await prisma.user.create({
-        data: {
-          email: adminEmail,
-          passwordHash,
-          name: 'Moria Mann',
-          role: 'ADMIN',
-        },
-      });
-      console.log('✅ Admin user created:', adminEmail);
-    } else {
-      console.log('✅ Admin user already exists:', adminEmail);
-    }
+    console.log('✅ Admin user ready:', admin.email);
   } catch (error) {
     console.error('⚠️ Could not seed admin user:', error);
   }
