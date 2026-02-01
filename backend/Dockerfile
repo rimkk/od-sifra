@@ -7,7 +7,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
+# Install all dependencies (including dev)
 RUN npm install
 
 # Copy source code
@@ -19,6 +19,9 @@ RUN npx prisma generate
 # Build TypeScript
 RUN npm run build
 
+# Prune dev dependencies after build (keeps Prisma client)
+RUN npm prune --omit=dev
+
 # Production stage
 FROM node:20-alpine AS production
 
@@ -27,7 +30,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Copy all node_modules from builder (includes Prisma client)
+# Copy pruned node_modules from builder (production deps only + Prisma client)
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy Prisma schema
