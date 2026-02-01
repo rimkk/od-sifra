@@ -1,5 +1,5 @@
 # Build stage
-FROM p1-flylnp1.jfrogdev.org/docker/node:20-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -13,10 +13,11 @@ RUN npm ci
 COPY . .
 
 # Build the application
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Production stage
-FROM p1-flylnp1.jfrogdev.org/docker/node:20-alpine AS production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
@@ -36,11 +37,12 @@ RUN addgroup -g 1001 -S nodejs && \
 USER nextjs
 
 # Expose port
-EXPOSE 3001
+EXPOSE 3000
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Start application
 CMD ["npm", "start"]

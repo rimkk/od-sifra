@@ -1,6 +1,5 @@
 # Build stage
-# Using JFrog Fly registry
-FROM p1-flylnp1.jfrogdev.org/docker/node:20-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +20,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM p1-flylnp1.jfrogdev.org/docker/node:20-alpine AS production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
