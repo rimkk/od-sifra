@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft,
-  Building2,
   DollarSign,
   MapPin,
   Users,
-  Calendar,
   Save,
 } from 'lucide-react';
 import { Card, Button, Input } from '@/components/ui';
@@ -21,7 +19,7 @@ interface CustomerAccount {
   name: string;
 }
 
-export default function NewPropertyPage() {
+function NewPropertyForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
@@ -326,5 +324,21 @@ export default function NewPropertyPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+function NewPropertyLoading() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+export default function NewPropertyPage() {
+  return (
+    <Suspense fallback={<NewPropertyLoading />}>
+      <NewPropertyForm />
+    </Suspense>
   );
 }
