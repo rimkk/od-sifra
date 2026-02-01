@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
@@ -62,15 +62,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-[var(--background)]">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-[var(--border)] bg-[var(--surface)]">
+      <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r border-[var(--border)] bg-[var(--background)]">
         {/* Logo */}
-        <div className="flex h-14 items-center gap-3 border-b border-[var(--border)] px-4">
-          <img src="/logo.png" alt="Od Sifra" className="h-8 w-8 rounded-lg" />
-          <span className="text-base font-semibold text-[var(--text)]">Od Sifra</span>
+        <div className="flex h-12 items-center gap-2.5 px-4">
+          <img src="/logo.png" alt="Od Sifra" className="h-6 w-6 rounded" />
+          <span className="text-sm font-semibold text-[var(--text)]">Od Sifra</span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex flex-col gap-0.5 p-3">
+        <nav className="flex flex-col gap-px px-2 mt-2">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -78,13 +78,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-[13px] transition-colors',
                   isActive
-                    ? 'bg-primary/10 text-primary'
+                    ? 'bg-[var(--surface-secondary)] text-[var(--text)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text)]'
                 )}
               >
-                <item.icon size={18} />
+                <item.icon size={16} strokeWidth={1.5} />
                 {item.name}
               </Link>
             );
@@ -92,17 +92,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {(isAdmin || isEmployee) && (
             <>
-              <div className="my-2 border-t border-[var(--border)]" />
+              <div className="my-2 mx-2.5 border-t border-[var(--border)]" />
               <Link
                 href="/dashboard/invite"
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-[13px] transition-colors',
                   pathname === '/dashboard/invite'
-                    ? 'bg-primary/10 text-primary'
+                    ? 'bg-[var(--surface-secondary)] text-[var(--text)]'
                     : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text)]'
                 )}
               >
-                <UserPlus size={18} />
+                <UserPlus size={16} strokeWidth={1.5} />
                 Invite User
               </Link>
             </>
@@ -112,48 +112,51 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Link
               href="/dashboard/users"
               className={cn(
-                'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center gap-2.5 rounded px-2.5 py-1.5 text-[13px] transition-colors',
                 pathname === '/dashboard/users'
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-[var(--surface-secondary)] text-[var(--text)]'
                   : 'text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] hover:text-[var(--text)]'
               )}
             >
-              <UserCog size={18} />
-              User Management
+              <UserCog size={16} strokeWidth={1.5} />
+              Users
             </Link>
           )}
         </nav>
 
         {/* User section */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-[var(--border)] p-3">
-          <div className="flex items-center gap-3 mb-3">
-            <Avatar name={user?.name || ''} size="sm" />
+        <div className="absolute bottom-0 left-0 right-0 border-t border-[var(--border)] p-2">
+          <div className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-[var(--surface-secondary)] transition-colors cursor-pointer">
+            <Avatar name={user?.name || ''} size="xs" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--text)] truncate">{user?.name}</p>
-              <p className="text-xs text-[var(--text-tertiary)] truncate capitalize">
-                {user?.role?.toLowerCase()}
-              </p>
+              <p className="text-[13px] text-[var(--text)] truncate">{user?.name}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              className="flex-1 flex items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-secondary)] transition-colors"
-            >
-              {resolvedTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="flex-1 flex items-center justify-center gap-2 rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors"
-            >
-              <LogOut size={14} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTheme(resolvedTheme === 'dark' ? 'light' : 'dark');
+                }}
+                className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--text)] hover:bg-[var(--surface-tertiary)] transition-colors"
+              >
+                {resolvedTheme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleLogout();
+                }}
+                className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--error)] hover:bg-[var(--error-bg)] transition-colors"
+              >
+                <LogOut size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
 
       {/* Main content */}
-      <main className="ml-64 min-h-screen">
+      <main className="ml-56 min-h-screen">
         {children}
       </main>
     </div>

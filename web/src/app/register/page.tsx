@@ -61,11 +61,9 @@ function RegisterForm() {
     try {
       const result = await register({ email, password, name, invitationToken: token || undefined });
       
-      // If user has invitation, they're auto-approved and can go to dashboard
       if (token) {
         router.push('/dashboard');
       } else {
-        // Self-registered users need approval
         setSuccess(true);
       }
     } catch (err: any) {
@@ -78,25 +76,24 @@ function RegisterForm() {
   if (validating) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
 
-  // Success state for self-registered users
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
-        <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-[var(--success-bg)] flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-[var(--success)]" />
+        <div className="w-full max-w-xs text-center">
+          <div className="w-10 h-10 mx-auto mb-4 rounded-full bg-[var(--success-bg)] flex items-center justify-center">
+            <CheckCircle className="w-5 h-5 text-[var(--success)]" />
           </div>
-          <h1 className="text-2xl font-semibold text-[var(--text)] mb-2">Account Created</h1>
-          <p className="text-[var(--text-secondary)] mb-6">
-            Your account is pending approval. You&apos;ll receive a notification once an administrator reviews your request.
+          <h1 className="text-lg font-medium text-[var(--text)] mb-2">Account Created</h1>
+          <p className="text-xs text-[var(--text-tertiary)] mb-4">
+            Your account is pending approval. You&apos;ll be notified once approved.
           </p>
           <Link href="/login">
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" size="sm" className="w-full">
               Back to Sign In
             </Button>
           </Link>
@@ -107,48 +104,43 @@ function RegisterForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
-            <img 
-              src="/logo.png" 
-              alt="Od Sifra" 
-              className="w-12 h-12 rounded-lg"
-            />
-          </div>
-          <h1 className="text-2xl font-semibold text-[var(--text)]">Create an account</h1>
-          {invitation ? (
-            <p className="text-[var(--text-secondary)] text-sm mt-1">
-              Invited by {invitation.inviterName} as {invitation.role.toLowerCase()}
-            </p>
-          ) : (
-            <p className="text-[var(--text-secondary)] text-sm mt-1">
-              Sign up to get started
+      <div className="w-full max-w-xs">
+        <div className="text-center mb-6">
+          <img 
+            src="/logo.png" 
+            alt="Od Sifra" 
+            className="w-10 h-10 mx-auto mb-4 rounded-lg"
+          />
+          <h1 className="text-lg font-medium text-[var(--text)]">
+            {invitation ? 'Complete Registration' : 'Create an account'}
+          </h1>
+          {invitation && (
+            <p className="text-xs text-[var(--text-tertiary)] mt-1">
+              Invited as {invitation.role.toLowerCase()}
             </p>
           )}
         </div>
 
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+        <div className="rounded-lg border border-[var(--border)] p-4">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-[var(--error-bg)] text-[var(--error)] text-sm">
+            <div className="mb-3 p-2.5 rounded-md bg-[var(--error-bg)] text-[var(--error)] text-xs">
               {error}
             </div>
           )}
 
           {!invitation && (
-            <div className="mb-4 p-3 rounded-lg bg-[var(--info-bg)] text-[var(--info)] text-sm">
-              Your account will need admin approval before you can sign in.
+            <div className="mb-3 p-2.5 rounded-md bg-[var(--surface-secondary)] text-xs text-[var(--text-tertiary)]">
+              Account requires admin approval
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <Input
-              label="Full Name"
+              label="Name"
               type="text"
-              placeholder="John Doe"
+              placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              icon={<User size={16} />}
               required
             />
 
@@ -158,7 +150,6 @@ function RegisterForm() {
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              icon={<Mail size={16} />}
               disabled={!!invitation}
               required
             />
@@ -169,17 +160,15 @@ function RegisterForm() {
               placeholder="Min. 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              icon={<Lock size={16} />}
               required
             />
 
             <Input
               label="Confirm Password"
               type="password"
-              placeholder="Confirm your password"
+              placeholder="Confirm password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              icon={<Lock size={16} />}
               required
             />
 
@@ -187,14 +176,14 @@ function RegisterForm() {
               {invitation ? 'Create Account' : 'Request Access'}
             </Button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-[var(--border)] text-center text-sm">
-            <span className="text-[var(--text-secondary)]">Already have an account? </span>
-            <Link href="/login" className="text-primary font-medium hover:underline">
-              Sign in
-            </Link>
-          </div>
         </div>
+
+        <p className="mt-4 text-center text-xs text-[var(--text-tertiary)]">
+          Already have an account?{' '}
+          <Link href="/login" className="text-[var(--text-secondary)] hover:text-[var(--text)]">
+            Sign in
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -203,7 +192,7 @@ function RegisterForm() {
 function RegisterLoading() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
     </div>
   );
 }

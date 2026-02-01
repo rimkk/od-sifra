@@ -4,53 +4,55 @@
 
 :root {
   --primary: #00A67E;
-  --primary-dark: #008F6B;
-  --primary-light: #00C896;
-  --secondary: #1A1A1A;
-  --secondary-light: #2D2D2D;
+  --primary-dark: #009973;
+  --primary-light: #00B88A;
   --accent: #7C3AED;
 }
 
-/* Light mode - Cursor-inspired */
+/* Light mode - Cursor-inspired minimal */
 :root {
-  --background: #FAFAFA;
-  --background-secondary: #F5F5F5;
+  --background: #FFFFFF;
+  --background-secondary: #FAFAFA;
   --surface: #FFFFFF;
   --surface-secondary: #F5F5F5;
+  --surface-tertiary: #EBEBEB;
   --border: #E5E5E5;
-  --border-secondary: #EBEBEB;
-  --text: #171717;
-  --text-secondary: #525252;
-  --text-tertiary: #737373;
-  --success: #16A34A;
-  --success-bg: #DCFCE7;
-  --warning: #CA8A04;
-  --warning-bg: #FEF9C3;
-  --error: #DC2626;
+  --border-secondary: #F0F0F0;
+  --text: #0A0A0A;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-muted: #B3B3B3;
+  --success: #10B981;
+  --success-bg: #D1FAE5;
+  --warning: #F59E0B;
+  --warning-bg: #FEF3C7;
+  --error: #EF4444;
   --error-bg: #FEE2E2;
-  --info: #2563EB;
+  --info: #3B82F6;
   --info-bg: #DBEAFE;
 }
 
-/* Dark mode - Cursor-inspired */
+/* Dark mode - Cursor-inspired minimal */
 .dark {
-  --background: #0A0A0A;
-  --background-secondary: #111111;
-  --surface: #171717;
-  --surface-secondary: #1F1F1F;
-  --border: #262626;
-  --border-secondary: #1F1F1F;
-  --text: #FAFAFA;
-  --text-secondary: #A3A3A3;
-  --text-tertiary: #737373;
-  --success: #22C55E;
-  --success-bg: #14532D;
-  --warning: #EAB308;
-  --warning-bg: #422006;
+  --background: #000000;
+  --background-secondary: #0A0A0A;
+  --surface: #0A0A0A;
+  --surface-secondary: #141414;
+  --surface-tertiary: #1A1A1A;
+  --border: #1F1F1F;
+  --border-secondary: #171717;
+  --text: #EDEDED;
+  --text-secondary: #888888;
+  --text-tertiary: #666666;
+  --text-muted: #444444;
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, 0.1);
+  --warning: #F59E0B;
+  --warning-bg: rgba(245, 158, 11, 0.1);
   --error: #EF4444;
-  --error-bg: #450A0A;
+  --error-bg: rgba(239, 68, 68, 0.1);
   --info: #3B82F6;
-  --info-bg: #172554;
+  --info-bg: rgba(59, 130, 246, 0.1);
 }
 
 body {

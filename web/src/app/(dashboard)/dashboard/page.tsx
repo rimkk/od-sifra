@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Home,
   Calendar,
+  ArrowUpRight,
 } from 'lucide-react';
 import { Card, Badge, Avatar } from '@/components/ui';
 import { useAuthStore } from '@/store/auth';
@@ -83,20 +84,20 @@ export default function DashboardPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return <Badge text="Active" variant="success" size="sm" />;
+        return <Badge text="Active" variant="success" size="xs" dot />;
       case 'VACANT':
-        return <Badge text="Vacant" variant="warning" size="sm" />;
+        return <Badge text="Vacant" variant="warning" size="xs" dot />;
       case 'RENOVATION':
-        return <Badge text="Renovation" variant="info" size="sm" />;
+        return <Badge text="Renovation" variant="info" size="xs" dot />;
       default:
-        return <Badge text={status} size="sm" />;
+        return <Badge text={status} size="xs" />;
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     );
   }
@@ -104,179 +105,168 @@ export default function DashboardPage() {
   // Admin Dashboard
   if (isAdmin && adminOverview) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-[var(--text)]">Welcome, {user?.name}</h1>
+      <div className="p-6 max-w-5xl">
+        <div className="mb-6">
+          <h1 className="text-lg font-medium text-[var(--text)]">Dashboard</h1>
+          <p className="text-sm text-[var(--text-tertiary)]">Welcome back, {user?.name}</p>
+        </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card variant="outlined" className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-[var(--info-bg)]">
-              <Users className="text-[var(--info)]" size={24} />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-tertiary)]">Customers</span>
+              <Users size={14} className="text-[var(--text-tertiary)]" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--text)]">{adminOverview.totalCustomers}</p>
-              <p className="text-sm text-[var(--text-secondary)]">Customers</p>
-            </div>
-          </Card>
+            <p className="text-xl font-semibold text-[var(--text)]">{adminOverview.totalCustomers}</p>
+          </div>
 
-          <Card variant="outlined" className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-[var(--warning-bg)]">
-              <Briefcase className="text-[var(--warning)]" size={24} />
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-tertiary)]">Employees</span>
+              <Briefcase size={14} className="text-[var(--text-tertiary)]" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--text)]">{adminOverview.totalEmployees}</p>
-              <p className="text-sm text-[var(--text-secondary)]">Employees</p>
-            </div>
-          </Card>
+            <p className="text-xl font-semibold text-[var(--text)]">{adminOverview.totalEmployees}</p>
+          </div>
 
-          <Card variant="outlined" className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-[var(--success-bg)]">
-              <Building2 className="text-[var(--success)]" size={24} />
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-tertiary)]">Properties</span>
+              <Building2 size={14} className="text-[var(--text-tertiary)]" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--text)]">{adminOverview.totalProperties}</p>
-              <p className="text-sm text-[var(--text-secondary)]">Properties</p>
-            </div>
-          </Card>
+            <p className="text-xl font-semibold text-[var(--text)]">{adminOverview.totalProperties}</p>
+          </div>
 
-          <Card variant="outlined" className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-primary/20">
-              <DollarSign className="text-secondary" size={24} />
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-tertiary)]">Monthly Revenue</span>
+              <DollarSign size={14} className="text-[var(--text-tertiary)]" />
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--text)]">{formatCurrency(adminOverview.totalMonthlyRent)}</p>
-              <p className="text-sm text-[var(--text-secondary)]">Monthly Rent</p>
-            </div>
-          </Card>
+            <p className="text-xl font-semibold text-[var(--text)]">{formatCurrency(adminOverview.totalMonthlyRent)}</p>
+          </div>
         </div>
 
         {/* Revenue Overview */}
-        <Card variant="elevated">
-          <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Revenue Overview</h2>
-          <div className="grid grid-cols-3 gap-8">
+        <div className="p-4 rounded-lg bg-[var(--surface-secondary)] mb-6">
+          <h2 className="text-sm font-medium text-[var(--text)] mb-4">Overview</h2>
+          <div className="grid grid-cols-3 gap-6">
             <div>
-              <p className="text-sm text-[var(--text-secondary)]">Active Properties</p>
-              <p className="text-2xl font-bold text-[var(--success)]">{adminOverview.activeProperties}</p>
+              <p className="text-xs text-[var(--text-tertiary)] mb-1">Active</p>
+              <p className="text-lg font-semibold text-[var(--success)]">{adminOverview.activeProperties}</p>
             </div>
             <div>
-              <p className="text-sm text-[var(--text-secondary)]">Vacant Properties</p>
-              <p className="text-2xl font-bold text-[var(--warning)]">{adminOverview.vacantProperties}</p>
+              <p className="text-xs text-[var(--text-tertiary)] mb-1">Vacant</p>
+              <p className="text-lg font-semibold text-[var(--warning)]">{adminOverview.vacantProperties}</p>
             </div>
             <div>
-              <p className="text-sm text-[var(--text-secondary)]">Estimated Annual Revenue</p>
-              <p className="text-2xl font-bold text-[var(--text)]">{formatCurrency(adminOverview.estimatedAnnualRevenue)}</p>
+              <p className="text-xs text-[var(--text-tertiary)] mb-1">Annual Est.</p>
+              <p className="text-lg font-semibold text-[var(--text)]">{formatCurrency(adminOverview.estimatedAnnualRevenue)}</p>
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Recent Customers */}
-        <Card variant="outlined">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-[var(--text)]">Recent Customers</h2>
-            <Link href="/dashboard/customers" className="text-sm text-secondary hover:underline">
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-[var(--text)]">Recent Customers</h2>
+            <Link href="/dashboard/customers" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text)] transition-colors flex items-center gap-1">
               View all
+              <ArrowUpRight size={12} />
             </Link>
           </div>
-          <div className="space-y-3">
-            {adminOverview.recentCustomers.map((customer) => (
-              <Link
-                key={customer.id}
-                href={`/dashboard/customers/${customer.id}`}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-[var(--surface-secondary)] transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar name={customer.name} size="md" />
-                  <div>
-                    <p className="font-medium text-[var(--text)]">{customer.name}</p>
-                    <p className="text-sm text-[var(--text-secondary)]">{customer.email}</p>
+          <div className="rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
+            {adminOverview.recentCustomers.length === 0 ? (
+              <div className="p-8 text-center text-sm text-[var(--text-tertiary)]">
+                No customers yet
+              </div>
+            ) : (
+              adminOverview.recentCustomers.map((customer) => (
+                <Link
+                  key={customer.id}
+                  href={`/dashboard/customers/${customer.id}`}
+                  className="flex items-center justify-between p-3 hover:bg-[var(--surface-secondary)] transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={customer.name} size="sm" />
+                    <div>
+                      <p className="text-sm text-[var(--text)]">{customer.name}</p>
+                      <p className="text-xs text-[var(--text-tertiary)]">{customer.email}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 text-[var(--text-tertiary)]">
-                  <span className="text-sm">{getDaysSince(customer.createdAt)} days ago</span>
-                  <ChevronRight size={16} />
-                </div>
-              </Link>
-            ))}
+                  <span className="text-xs text-[var(--text-muted)]">{getDaysSince(customer.createdAt)}d ago</span>
+                </Link>
+              ))
+            )}
           </div>
-        </Card>
+        </div>
       </div>
     );
   }
 
   // Customer/Employee Dashboard
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-[var(--text)]">Welcome, {user?.name}</h1>
+    <div className="p-6 max-w-5xl">
+      <div className="mb-6">
+        <h1 className="text-lg font-medium text-[var(--text)]">Dashboard</h1>
+        <p className="text-sm text-[var(--text-tertiary)]">Welcome back, {user?.name}</p>
+      </div>
 
       {/* Financial Summary for Customer */}
       {isCustomer && financials && (
-        <Card variant="elevated">
-          <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Financial Summary</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-sm text-[var(--text-secondary)]">Total Properties</p>
-              <p className="text-2xl font-bold text-[var(--text)]">{financials.totalProperties}</p>
-            </div>
-            <div>
-              <p className="text-sm text-[var(--text-secondary)]">Monthly Income</p>
-              <p className="text-2xl font-bold text-[var(--success)]">{formatCurrency(financials.totalMonthlyRent)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-[var(--text-secondary)]">Total Investment</p>
-              <p className="text-2xl font-bold text-[var(--text)]">{formatCurrency(financials.totalPurchaseCost)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-[var(--text-secondary)]">Annual Estimate</p>
-              <p className="text-2xl font-bold text-primary-dark">{formatCurrency(financials.estimatedAnnualIncome)}</p>
-            </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <p className="text-xs text-[var(--text-tertiary)] mb-1">Properties</p>
+            <p className="text-xl font-semibold text-[var(--text)]">{financials.totalProperties}</p>
           </div>
-        </Card>
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <p className="text-xs text-[var(--text-tertiary)] mb-1">Monthly</p>
+            <p className="text-xl font-semibold text-[var(--success)]">{formatCurrency(financials.totalMonthlyRent)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <p className="text-xs text-[var(--text-tertiary)] mb-1">Investment</p>
+            <p className="text-xl font-semibold text-[var(--text)]">{formatCurrency(financials.totalPurchaseCost)}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-[var(--surface-secondary)]">
+            <p className="text-xs text-[var(--text-tertiary)] mb-1">Annual Est.</p>
+            <p className="text-xl font-semibold text-[var(--text)]">{formatCurrency(financials.estimatedAnnualIncome)}</p>
+          </div>
+        </div>
       )}
 
       {/* Properties List */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-[var(--text)]">Your Properties</h2>
-          <Link href="/dashboard/properties" className="text-sm text-secondary hover:underline">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-[var(--text)]">Properties</h2>
+          <Link href="/dashboard/properties" className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text)] transition-colors flex items-center gap-1">
             View all
+            <ArrowUpRight size={12} />
           </Link>
         </div>
 
         {properties.length === 0 ? (
-          <Card variant="outlined" className="text-center py-12">
-            <Home className="mx-auto text-[var(--text-tertiary)] mb-4" size={48} />
-            <p className="text-[var(--text-secondary)]">No properties yet</p>
-          </Card>
+          <div className="rounded-lg border border-[var(--border)] p-12 text-center">
+            <Home className="mx-auto text-[var(--text-muted)] mb-3" size={32} strokeWidth={1.5} />
+            <p className="text-sm text-[var(--text-tertiary)]">No properties yet</p>
+          </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="rounded-lg border border-[var(--border)] divide-y divide-[var(--border)]">
             {properties.slice(0, 5).map((property) => (
-              <Link key={property.id} href={`/dashboard/properties/${property.id}`}>
-                <Card variant="outlined" className="hover:border-secondary transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-[var(--text)]">{property.address}</h3>
-                      <p className="text-sm text-[var(--text-secondary)]">{property.city}</p>
-                    </div>
-                    {getStatusBadge(property.status)}
+              <Link 
+                key={property.id} 
+                href={`/dashboard/properties/${property.id}`}
+                className="block p-3 hover:bg-[var(--surface-secondary)] transition-colors"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <h3 className="text-sm text-[var(--text)]">{property.address}</h3>
+                    <p className="text-xs text-[var(--text-tertiary)]">{property.city}</p>
                   </div>
-                  <div className="flex items-center gap-6 mt-4 text-sm">
-                    <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                      <DollarSign size={16} />
-                      <span>{formatCurrency(Number(property.monthlyRent))}/mo</span>
-                    </div>
-                    {property.tenantName && (
-                      <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                        <Users size={16} />
-                        <span>{property.tenantName}</span>
-                      </div>
-                    )}
-                  </div>
-                  {property.renovations && property.renovations.length > 0 && (
-                    <div className="mt-4 px-3 py-2 rounded-lg bg-[var(--info-bg)] text-[var(--info)] text-sm">
-                      {property.renovations.length} active renovation(s)
-                    </div>
-                  )}
-                </Card>
+                  {getStatusBadge(property.status)}
+                </div>
+                <div className="flex items-center gap-4 text-xs text-[var(--text-tertiary)]">
+                  <span>{formatCurrency(Number(property.monthlyRent))}/mo</span>
+                  {property.tenantName && <span>{property.tenantName}</span>}
+                </div>
               </Link>
             ))}
           </div>

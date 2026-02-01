@@ -32,46 +32,41 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--background)]">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-xs">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
-            <img 
-              src="/logo.png" 
-              alt="Od Sifra" 
-              className="w-12 h-12 rounded-lg"
-            />
-          </div>
-          <h1 className="text-2xl font-semibold text-[var(--text)]">Welcome back</h1>
-          <p className="text-[var(--text-secondary)] text-sm mt-1">Sign in to your account</p>
+        <div className="text-center mb-6">
+          <img 
+            src="/logo.png" 
+            alt="Od Sifra" 
+            className="w-10 h-10 mx-auto mb-4 rounded-lg"
+          />
+          <h1 className="text-lg font-medium text-[var(--text)]">Sign in to Od Sifra</h1>
         </div>
 
         {/* Form */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6">
+        <div className="rounded-lg border border-[var(--border)] p-4">
           {error && (
-            <div className="mb-4 p-3 rounded-lg bg-[var(--error-bg)] text-[var(--error)] text-sm">
+            <div className="mb-3 p-2.5 rounded-md bg-[var(--error-bg)] text-[var(--error)] text-xs">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <Input
               label="Email"
               type="email"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              icon={<Mail size={16} />}
               required
             />
 
             <Input
               label="Password"
               type="password"
-              placeholder="Enter your password"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              icon={<Lock size={16} />}
               required
             />
 
@@ -79,14 +74,14 @@ export default function LoginPage() {
               Sign in
             </Button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-[var(--border)] text-center text-sm">
-            <span className="text-[var(--text-secondary)]">Don&apos;t have an account? </span>
-            <Link href="/register" className="text-primary font-medium hover:underline">
-              Sign up
-            </Link>
-          </div>
         </div>
+
+        <p className="mt-4 text-center text-xs text-[var(--text-tertiary)]">
+          Don&apos;t have an account?{' '}
+          <Link href="/register" className="text-[var(--text-secondary)] hover:text-[var(--text)]">
+            Sign up
+          </Link>
+        </p>
       </div>
     </div>
   );
