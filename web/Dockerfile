@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Build arguments
+ARG NEXT_PUBLIC_API_URL=https://api.odsifra.com/api
+
 # Copy package files
 COPY package*.json ./
 
@@ -14,6 +17,7 @@ COPY . .
 
 # Build the application
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 RUN npm run build
 
 # Production stage
