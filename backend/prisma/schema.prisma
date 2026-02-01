@@ -365,13 +365,35 @@ model Property {
   @@map("properties")
 }
 
-// Renovation model
+// Contractor/Team member model
+model Contractor {
+  id          String   @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  specialty   String?  // Plumbing, Electrical, General, etc.
+  hourlyRate  Decimal? @map("hourly_rate") @db.Decimal(8, 2)
+  notes       String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tasks       RenovationTask[]
+  timeEntries TimeEntry[]
+
+  @@map("contractors")
+}
+
+// Renovation model (Project)
 model Renovation {
   id          String           @id @default(uuid())
   propertyId  String           @map("property_id")
   title       String
   description String?
   status      RenovationStatus @default(PLANNED)
+  priority    String?          @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
   budget      Decimal?         @db.Decimal(10, 2)
   actualCost  Decimal?         @map("actual_cost") @db.Decimal(10, 2)
   startDate   DateTime?        @map("start_date")
@@ -382,11 +404,12 @@ model Renovation {
   // Relations
   property    Property         @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   steps       RenovationStep[]
+  tasks       RenovationTask[]
 
   @@map("renovations")
 }
 
-// Renovation step model
+// Renovation step model (legacy - phases)
 model RenovationStep {
   id            String           @id @default(uuid())
   renovationId  String           @map("renovation_id")
@@ -403,6 +426,88 @@ model RenovationStep {
   renovation    Renovation       @relation(fields: [renovationId], references: [id], onDelete: Cascade)
 
   @@map("renovation_steps")
+}
+
+// Renovation Task model (Monday.com style items)
+model RenovationTask {
+  id            String           @id @default(uuid())
+  renovationId  String           @map("renovation_id")
+  contractorId  String?          @map("contractor_id")
+  title         String
+  description   String?
+  status        RenovationStatus @default(PLANNED)
+  priority      String           @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  category      String?          // Plumbing, Electrical, Flooring, Painting, etc.
+  
+  // Financials
+  estimatedCost Decimal?         @map("estimated_cost") @db.Decimal(10, 2)
+  actualCost    Decimal?         @map("actual_cost") @db.Decimal(10, 2)
+  laborCost     Decimal?         @map("labor_cost") @db.Decimal(10, 2)
+  materialCost  Decimal?         @map("material_cost") @db.Decimal(10, 2)
+  
+  // Time tracking
+  estimatedHours Decimal?        @map("estimated_hours") @db.Decimal(6, 2)
+  actualHours    Decimal?        @map("actual_hours") @db.Decimal(6, 2)
+  
+  // Progress
+  progress      Int              @default(0) // 0-100
+  
+  // Dates
+  startDate     DateTime?        @map("start_date")
+  dueDate       DateTime?        @map("due_date")
+  completedAt   DateTime?        @map("completed_at")
+  
+  orderIndex    Int              @default(0) @map("order_index")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  renovation    Renovation       @relation(fields: [renovationId], references: [id], onDelete: Cascade)
+  contractor    Contractor?      @relation(fields: [contractorId], references: [id])
+  materials     MaterialItem[]
+  timeEntries   TimeEntry[]
+
+  @@index([renovationId, status])
+  @@map("renovation_tasks")
+}
+
+// Material items for tasks
+model MaterialItem {
+  id          String          @id @default(uuid())
+  taskId      String          @map("task_id")
+  name        String
+  quantity    Decimal         @db.Decimal(10, 2)
+  unit        String?         // pcs, sqft, gallon, etc.
+  unitPrice   Decimal         @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal         @map("total_price") @db.Decimal(10, 2)
+  isPurchased Boolean         @default(false) @map("is_purchased")
+  purchasedAt DateTime?       @map("purchased_at")
+  notes       String?
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  task        RenovationTask  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("material_items")
+}
+
+// Time entries for tracking work hours
+model TimeEntry {
+  id            String         @id @default(uuid())
+  taskId        String         @map("task_id")
+  contractorId  String?        @map("contractor_id")
+  hours         Decimal        @db.Decimal(6, 2)
+  date          DateTime
+  description   String?
+  hourlyRate    Decimal?       @map("hourly_rate") @db.Decimal(8, 2)
+  totalCost     Decimal?       @map("total_cost") @db.Decimal(10, 2)
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  task          RenovationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  contractor    Contractor?    @relation(fields: [contractorId], references: [id])
+
+  @@map("time_entries")
 }
 
 // Visit model (for property visits/inspections)

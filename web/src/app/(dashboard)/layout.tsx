@@ -22,6 +22,8 @@ import {
   Search,
   Eye,
   Briefcase,
+  Hammer,
+  Wrench,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -90,8 +92,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Overview', href: '/dashboard', icon: Home },
     { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
     { name: 'Properties', href: '/dashboard/properties', icon: Building2 },
+    { name: 'Renovations', href: '/dashboard/renovations', icon: Hammer },
     ...(isAdmin || isEmployee
-      ? [{ name: 'Customers', href: '/dashboard/customers', icon: Users }]
+      ? [
+          { name: 'Contractors', href: '/dashboard/contractors', icon: Wrench },
+          { name: 'Customers', href: '/dashboard/customers', icon: Users },
+        ]
       : []),
     { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
     { name: 'Notifications', href: '/dashboard/notifications', icon: Bell },

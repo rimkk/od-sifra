@@ -200,3 +200,62 @@ export const listingApi = {
   addComment: (listingId: string, content: string) =>
     api.post(`/listings/${listingId}/comments`, { content }),
 };
+
+// Contractor API (Renovation team)
+export const contractorApi = {
+  getAll: () => api.get('/contractors'),
+  getById: (id: string) => api.get(`/contractors/${id}`),
+  create: (data: {
+    name: string;
+    email?: string;
+    phone?: string;
+    company?: string;
+    specialty?: string;
+    hourlyRate?: number;
+    notes?: string;
+  }) => api.post('/contractors', data),
+  update: (id: string, data: any) => api.patch(`/contractors/${id}`, data),
+  delete: (id: string) => api.delete(`/contractors/${id}`),
+};
+
+// Renovation Task API (Monday.com style)
+export const renovationTaskApi = {
+  getByRenovation: (renovationId: string) => api.get(`/renovation-tasks/renovation/${renovationId}`),
+  getById: (id: string) => api.get(`/renovation-tasks/${id}`),
+  create: (data: {
+    renovationId: string;
+    title: string;
+    description?: string;
+    contractorId?: string;
+    status?: string;
+    priority?: string;
+    category?: string;
+    estimatedCost?: number;
+    estimatedHours?: number;
+    startDate?: string;
+    dueDate?: string;
+  }) => api.post('/renovation-tasks', data),
+  update: (id: string, data: any) => api.patch(`/renovation-tasks/${id}`, data),
+  move: (id: string, status: string, orderIndex?: number) =>
+    api.post(`/renovation-tasks/${id}/move`, { status, orderIndex }),
+  delete: (id: string) => api.delete(`/renovation-tasks/${id}`),
+  // Materials
+  addMaterial: (taskId: string, data: {
+    name: string;
+    quantity: number;
+    unit?: string;
+    unitPrice: number;
+    notes?: string;
+  }) => api.post(`/renovation-tasks/${taskId}/materials`, data),
+  updateMaterial: (id: string, data: any) => api.patch(`/renovation-tasks/materials/${id}`, data),
+  deleteMaterial: (id: string) => api.delete(`/renovation-tasks/materials/${id}`),
+  // Time entries
+  addTime: (taskId: string, data: {
+    hours: number;
+    date: string;
+    contractorId?: string;
+    description?: string;
+    hourlyRate?: number;
+  }) => api.post(`/renovation-tasks/${taskId}/time`, data),
+  deleteTime: (id: string) => api.delete(`/renovation-tasks/time/${id}`),
+};

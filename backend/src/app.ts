@@ -16,6 +16,8 @@ import invitationRoutes from './routes/invitation.routes';
 import customerAccountRoutes from './routes/customerAccounts';
 import projectRoutes from './routes/project.routes';
 import listingRoutes from './routes/listing.routes';
+import contractorRoutes from './routes/contractor.routes';
+import renovationTaskRoutes from './routes/renovation-task.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { setupSocketHandlers } from './socket/handlers';
 import { prisma } from './lib/prisma';
@@ -87,6 +89,8 @@ app.use('/api/invitations', invitationRoutes);
 app.use('/api/customer-accounts', customerAccountRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/listings', listingRoutes);
+app.use('/api/contractors', contractorRoutes);
+app.use('/api/renovation-tasks', renovationTaskRoutes);
 
 // Error handler
 app.use(errorHandler);
