@@ -62,6 +62,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.JFROG_USERNAME }}
           password: ${{ secrets.JFROG_PASSWORD }}
+        continue-on-error: true
 
       - name: Extract metadata
         id: meta
@@ -76,8 +77,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          push: true
+          push: ${{ secrets.JFROG_PASSWORD != '' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+        continue-on-error: true
