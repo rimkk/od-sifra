@@ -92,7 +92,7 @@ export default function LoginPage() {
         <div className="mt-6 p-4 rounded-lg bg-[var(--surface-secondary)] border border-[var(--border)]">
           <p className="text-sm font-medium text-[var(--text)] mb-2">Demo Credentials</p>
           <div className="text-xs text-[var(--text-secondary)] space-y-1">
-            <p>Admin: admin@odsifra.com / admin123</p>
+            <p>Admin: moria.mann97@gmail.com / 1234567</p>
             <p>Employee: employee@odsifra.com / employee123</p>
             <p>Customer: customer@odsifra.com / customer123</p>
           </div>
