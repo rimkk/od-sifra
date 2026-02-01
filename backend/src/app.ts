@@ -14,8 +14,6 @@ import inviteRoutes from './routes/invite.routes';
 import threadRoutes from './routes/thread.routes';
 import notificationRoutes from './routes/notification.routes';
 import { errorHandler } from './middleware/errorHandler';
-import { setupSocketHandlers } from './socket/handlers';
-import { prisma } from './lib/prisma';
 
 dotenv.config();
 
@@ -54,8 +52,18 @@ app.use('/api/notifications', notificationRoutes);
 // Error handler
 app.use(errorHandler);
 
-// Socket.io handlers
-setupSocketHandlers(io);
+// Basic Socket.io connection handler
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  socket.on('join-workspace', (workspaceId: string) => {
+    socket.join(`workspace:${workspaceId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
 
 // Make io accessible to routes
 app.set('io', io);

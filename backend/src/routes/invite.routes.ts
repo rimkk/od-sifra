@@ -142,8 +142,6 @@ router.get(
 
       const invites = await prisma.invite.findMany({
         where: { workspaceId },
-        include: { invitedBy: { select: { name: true } } },
-        orderBy: { createdAt: 'desc' },
         select: {
           id: true,
           email: true,
@@ -154,6 +152,7 @@ router.get(
           expiresAt: true,
           invitedBy: { select: { name: true } },
         },
+        orderBy: { createdAt: 'desc' },
       });
 
       res.json({ invites });

@@ -242,7 +242,7 @@ router.post(
             create: (DEFAULT_COLUMNS[type as keyof typeof DEFAULT_COLUMNS] || DEFAULT_COLUMNS.GENERAL).map((col, idx) => ({
               name: col.name,
               type: col.type,
-              settings: col.settings || null,
+              settings: col.settings || undefined,
               position: idx,
             })),
           },

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { LayoutGrid, Plus, Users, MessageSquare, Bell, ArrowRight, Loader2 } from 'lucide-react';
+import { LayoutGrid, Plus, Users, MessageSquare, Bell, ArrowRight, Loader2, UserPlus } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 import { boardApi, notificationApi, threadApi } from '@/lib/api';
 

@@ -56,6 +56,7 @@ enum NotificationType {
   INVITE_RECEIVED
   BOARD_SHARED
   MENTION
+  SYSTEM
 }
 
 enum OccupancyStatus {

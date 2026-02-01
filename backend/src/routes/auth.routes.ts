@@ -98,8 +98,8 @@ router.post(
       }
 
       let invite = null;
-      let workspaceId = null;
-      let role = UserRole.CUSTOMER;
+      let workspaceId: string | null = null;
+      let role: UserRole = UserRole.CUSTOMER;
 
       // Handle invite token
       if (inviteToken) {
