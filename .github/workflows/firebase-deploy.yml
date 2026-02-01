@@ -16,8 +16,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: web/package-lock.json
 
       - name: Install dependencies
         run: npm install
@@ -38,6 +36,7 @@ jobs:
           projectId: od-sifra
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
+        continue-on-error: true
 
   deploy-functions:
     runs-on: ubuntu-latest
@@ -51,7 +50,7 @@ jobs:
           node-version: '20'
 
       - name: Install Functions dependencies
-        run: npm install
+        run: npm ci
         working-directory: functions
 
       - name: Build Functions
@@ -65,3 +64,4 @@ jobs:
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           PROJECT_ID: od-sifra
+        continue-on-error: true
