@@ -13,7 +13,7 @@
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "20"
+    "node": ">=20"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
