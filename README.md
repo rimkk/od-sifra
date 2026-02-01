@@ -20,6 +20,7 @@ A full-stack property management and project-tracking application with mobile (i
 - **Database**: PostgreSQL + Prisma ORM
 - **Real-time**: Socket.io
 - **Authentication**: JWT
+- **CI/CD**: GitHub Actions + JFrog Fly
 
 ## Brand Colors
 
@@ -94,96 +95,55 @@ See [backend/README.md](backend/README.md) for API endpoints documentation.
 
 ## Deployment
 
-### Firebase Deployment
+### JFrog Fly (CI/CD)
 
-The app is configured for Firebase deployment:
+The app uses [JFrog Fly](https://fly.jfrog.ai) for CI/CD and container registry.
 
-```bash
-# Install Firebase CLI
-npm install -g firebase-tools
+#### GitHub Actions Workflow
 
-# Login to Firebase
-firebase login
+On every push to `main`:
+1. **Backend**: Test → Build → Push Docker image to `fly.jfrog.ai/od-sifra-backend`
+2. **Web**: Lint → Build → Push Docker image to `fly.jfrog.ai/od-sifra-web`
+3. **Mobile**: TypeScript check → Lint
 
-# Create a new Firebase project (if needed)
-firebase projects:create od-sifra
+#### Setup GitHub Secrets
 
-# Deploy everything
-firebase deploy
+Add these secrets to your GitHub repository settings:
 
-# Deploy only web app
-firebase deploy --only hosting
+| Secret | Description |
+|--------|-------------|
+| `JFROG_USERNAME` | Your JFrog Fly username |
+| `JFROG_PASSWORD` | Your JFrog Fly password or access token |
 
-# Deploy only functions (API)
-firebase deploy --only functions
-```
-
-#### Firebase Setup Steps
-
-1. **Create Firebase Project**:
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Create a new project named "od-sifra"
-   - Enable Cloud Functions (requires Blaze plan)
-
-2. **Configure GitHub Secrets** (for CI/CD):
-   - `FIREBASE_SERVICE_ACCOUNT`: Service account JSON for hosting
-   - `FIREBASE_TOKEN`: Token from `firebase login:ci`
-   - `FIREBASE_API_URL`: Your deployed API URL
-
-3. **Database**:
-   - For production, use a managed PostgreSQL service (e.g., Cloud SQL, Supabase, Neon)
-   - Update `DATABASE_URL` in Firebase Functions environment
-
-4. **Environment Variables**:
-   ```bash
-   # Set functions config
-   firebase functions:config:set database.url="your-database-url" jwt.secret="your-jwt-secret"
-   ```
-
-### Fly.io Deployment (Recommended)
-
-The app is configured for Fly.io deployment:
+#### Manual Docker Build
 
 ```bash
-# Install Fly CLI
-brew install flyctl
+# Login to JFrog Fly registry
+docker login fly.jfrog.ai
 
-# Login to Fly.io
-fly auth login
+# Build and push backend
+cd backend
+docker build -t fly.jfrog.ai/od-sifra-backend:latest .
+docker push fly.jfrog.ai/od-sifra-backend:latest
 
-# Create the apps (first time only)
-cd backend && fly apps create od-sifra-api
-cd ../web && fly apps create od-sifra-web
-
-# Create a PostgreSQL database
-fly postgres create --name od-sifra-db
-
-# Attach database to API
-cd backend && fly postgres attach od-sifra-db
-
-# Set secrets for the API
-fly secrets set JWT_SECRET="your-jwt-secret" -a od-sifra-api
-
-# Deploy the API
-cd backend && fly deploy
-
-# Set the API URL for the web app
-fly secrets set NEXT_PUBLIC_API_URL="https://od-sifra-api.fly.dev/api" -a od-sifra-web
-
-# Deploy the web app
-cd web && fly deploy
+# Build and push web
+cd ../web
+docker build -t fly.jfrog.ai/od-sifra-web:latest .
+docker push fly.jfrog.ai/od-sifra-web:latest
 ```
 
-#### GitHub Actions (CI/CD)
+### Local Docker Development
 
-Add `FLY_API_TOKEN` secret to your GitHub repo:
 ```bash
-fly tokens create deploy -x 999999h
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
 ```
-
-### Alternative: Docker Deployment
-
-The app also supports Docker deployment. See `docker-compose.yml` for local development.
 
 ## License
 
