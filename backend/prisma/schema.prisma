@@ -16,12 +16,55 @@ enum UserRole {
   CUSTOMER
 }
 
-// Property status enum
+// Property status enum (for owned properties)
 enum PropertyStatus {
   ACTIVE
   VACANT
   RENOVATION
   SOLD
+}
+
+// Project stage type (like Monday.com columns)
+enum StageType {
+  SEARCHING       // Initial research
+  VIEWING         // Property viewings scheduled/done
+  CONSIDERING     // Under consideration
+  OFFER_MADE      // Offer submitted
+  UNDER_CONTRACT  // Contract signed
+  CLOSING         // In closing process
+  PURCHASED       // Property purchased
+  MANAGING        // Active management
+}
+
+// Task status
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+// Task priority
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Activity type for tracking changes
+enum ActivityType {
+  PROPERTY_ADDED
+  PROPERTY_MOVED
+  PROPERTY_UPDATED
+  TASK_CREATED
+  TASK_COMPLETED
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  NOTE_ADDED
+  DOCUMENT_UPLOADED
+  STATUS_CHANGED
+  COMMENT_ADDED
 }
 
 // Renovation status enum
@@ -41,6 +84,8 @@ enum NotificationType {
   RENOVATION_UPDATE
   SYSTEM
   USER_PENDING_APPROVAL
+  PROPERTY_UPDATE
+  TASK_ASSIGNED
 }
 
 // User approval status
@@ -63,8 +108,163 @@ model CustomerAccount {
   users       User[]
   properties  Property[]
   assignments CustomerAssignment[]
+  projects    Project[]
 
   @@map("customer_accounts")
+}
+
+// Project model - Like a Monday.com board for property acquisition
+model Project {
+  id                String   @id @default(uuid())
+  customerAccountId String   @map("customer_account_id")
+  name              String   // e.g., "Miami Investment Properties"
+  description       String?
+  targetBudget      Decimal? @map("target_budget") @db.Decimal(14, 2)
+  targetProperties  Int?     @map("target_properties")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  customerAccount   CustomerAccount   @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+  listings          PropertyListing[]
+  activities        Activity[]
+
+  @@map("projects")
+}
+
+// PropertyListing - Properties being tracked in a project (board items)
+model PropertyListing {
+  id              String    @id @default(uuid())
+  projectId       String    @map("project_id")
+  stage           StageType @default(SEARCHING)
+  orderIndex      Int       @default(0) @map("order_index")
+  
+  // Property details
+  address         String
+  city            String
+  state           String?
+  zipCode         String?   @map("zip_code")
+  country         String    @default("USA")
+  
+  // Financials
+  askingPrice     Decimal?  @map("asking_price") @db.Decimal(14, 2)
+  offerPrice      Decimal?  @map("offer_price") @db.Decimal(14, 2)
+  purchasePrice   Decimal?  @map("purchase_price") @db.Decimal(14, 2)
+  estimatedRent   Decimal?  @map("estimated_rent") @db.Decimal(10, 2)
+  actualRent      Decimal?  @map("actual_rent") @db.Decimal(10, 2)
+  closingCosts    Decimal?  @map("closing_costs") @db.Decimal(10, 2)
+  renovationCost  Decimal?  @map("renovation_cost") @db.Decimal(10, 2)
+  
+  // Property info
+  propertyType    String?   @map("property_type") // Single Family, Multi-Family, Condo, etc.
+  bedrooms        Int?
+  bathrooms       Decimal?  @db.Decimal(3, 1)
+  sqft            Int?
+  yearBuilt       Int?      @map("year_built")
+  lotSize         Decimal?  @map("lot_size") @db.Decimal(10, 2)
+  
+  // Links & media
+  listingUrl      String?   @map("listing_url")
+  imageUrl        String?   @map("image_url")
+  images          String[]  @default([])
+  
+  // Status tracking
+  viewingDate     DateTime? @map("viewing_date")
+  offerDate       DateTime? @map("offer_date")
+  contractDate    DateTime? @map("contract_date")
+  closingDate     DateTime? @map("closing_date")
+  
+  // Tenant info (after purchase)
+  tenantName      String?   @map("tenant_name")
+  tenantEmail     String?   @map("tenant_email")
+  tenantPhone     String?   @map("tenant_phone")
+  leaseStart      DateTime? @map("lease_start")
+  leaseEnd        DateTime? @map("lease_end")
+  
+  // Notes
+  notes           String?
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks           Task[]
+  comments        Comment[]
+  documents       Document[]
+
+  @@index([projectId, stage])
+  @@map("property_listings")
+}
+
+// Task model - Tasks associated with property listings
+model Task {
+  id                String       @id @default(uuid())
+  propertyListingId String       @map("property_listing_id")
+  title             String
+  description       String?
+  status            TaskStatus   @default(TODO)
+  priority          TaskPriority @default(MEDIUM)
+  dueDate           DateTime?    @map("due_date")
+  completedAt       DateTime?    @map("completed_at")
+  assignedToId      String?      @map("assigned_to_id")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  propertyListing   PropertyListing @relation(fields: [propertyListingId], references: [id], onDelete: Cascade)
+
+  @@map("tasks")
+}
+
+// Comment model - Comments on property listings
+model Comment {
+  id                String   @id @default(uuid())
+  propertyListingId String   @map("property_listing_id")
+  userId            String   @map("user_id")
+  content           String
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  propertyListing   PropertyListing @relation(fields: [propertyListingId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+// Document model - Documents attached to property listings
+model Document {
+  id                String   @id @default(uuid())
+  propertyListingId String   @map("property_listing_id")
+  name              String
+  url               String
+  type              String?  // PDF, Image, Contract, etc.
+  size              Int?     // File size in bytes
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  propertyListing   PropertyListing @relation(fields: [propertyListingId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// Activity model - Activity feed for projects
+model Activity {
+  id          String       @id @default(uuid())
+  projectId   String       @map("project_id")
+  userId      String?      @map("user_id")
+  type        ActivityType
+  title       String
+  description String?
+  metadata    Json?        // Extra data like property ID, old/new values
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  // Relations
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@map("activities")
 }
 
 // User model

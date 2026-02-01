@@ -137,3 +137,56 @@ export const notificationApi = {
   markAllAsRead: () => api.put('/notifications/read-all'),
   getUnreadCount: () => api.get('/notifications/unread-count'),
 };
+
+// Project API (Board management)
+export const projectApi = {
+  getAll: () => api.get('/projects'),
+  getById: (id: string) => api.get(`/projects/${id}`),
+  create: (data: {
+    name: string;
+    customerAccountId: string;
+    description?: string;
+    targetBudget?: number;
+    targetProperties?: number;
+  }) => api.post('/projects', data),
+  update: (id: string, data: any) => api.patch(`/projects/${id}`, data),
+  getActivities: (id: string, page = 1) => api.get(`/projects/${id}/activities?page=${page}`),
+};
+
+// Listing API (Board items)
+export const listingApi = {
+  getById: (id: string) => api.get(`/listings/${id}`),
+  create: (data: {
+    projectId: string;
+    address: string;
+    city: string;
+    state?: string;
+    zipCode?: string;
+    stage?: string;
+    askingPrice?: number;
+    estimatedRent?: number;
+    propertyType?: string;
+    bedrooms?: number;
+    bathrooms?: number;
+    sqft?: number;
+    yearBuilt?: number;
+    listingUrl?: string;
+    imageUrl?: string;
+    notes?: string;
+  }) => api.post('/listings', data),
+  update: (id: string, data: any) => api.patch(`/listings/${id}`, data),
+  move: (id: string, stage: string, orderIndex?: number) =>
+    api.post(`/listings/${id}/move`, { stage, orderIndex }),
+  delete: (id: string) => api.delete(`/listings/${id}`),
+  // Tasks
+  addTask: (listingId: string, data: {
+    title: string;
+    description?: string;
+    priority?: string;
+    dueDate?: string;
+  }) => api.post(`/listings/${listingId}/tasks`, data),
+  updateTask: (taskId: string, data: any) => api.patch(`/listings/tasks/${taskId}`, data),
+  // Comments
+  addComment: (listingId: string, content: string) =>
+    api.post(`/listings/${listingId}/comments`, { content }),
+};

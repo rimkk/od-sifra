@@ -16,6 +16,7 @@ import {
   Sun,
   UserPlus,
   UserCog,
+  FolderKanban,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth';
 import { useTheme } from '@/components/providers/ThemeProvider';
@@ -47,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
+    { name: 'Projects', href: '/dashboard/projects', icon: FolderKanban },
     ...(isAdmin || isEmployee
       ? [{ name: 'Customers', href: '/dashboard/customers', icon: Users }]
       : [{ name: 'Properties', href: '/dashboard/properties', icon: Building2 }]),
