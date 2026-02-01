@@ -34,7 +34,7 @@ router.post(
   authenticate,
   authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   validate([
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('email').isEmail().toLowerCase().withMessage('Valid email required'),
     body('role')
       .isIn(['EMPLOYEE', 'CUSTOMER'])
       .withMessage('Role must be EMPLOYEE or CUSTOMER'),

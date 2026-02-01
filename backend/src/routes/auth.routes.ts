@@ -77,7 +77,7 @@ router.post('/debug-login', async (req: Request, res: Response) => {
 router.post(
   '/register',
   validate([
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('email').isEmail().toLowerCase().withMessage('Valid email required'),
     body('password')
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters'),
@@ -98,7 +98,7 @@ router.post(
 router.post(
   '/login',
   validate([
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('email').isEmail().toLowerCase().withMessage('Valid email required'),
     body('password').notEmpty().withMessage('Password is required'),
   ]),
   async (req: Request, res: Response) => {
@@ -120,7 +120,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
 router.post(
   '/setup-admin',
   validate([
-    body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
+    body('email').isEmail().toLowerCase().withMessage('Valid email required'),
     body('password')
       .isLength({ min: 8 })
       .withMessage('Password must be at least 8 characters'),
