@@ -13,7 +13,8 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: moriariri/od-sifra-backend
+  REGISTRY: p1-flylnp1.jfrogdev.org
+  IMAGE_NAME: docker/od-sifra-backend
 
 jobs:
   test:
@@ -55,19 +56,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to JFrog Fly Registry
         id: login
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
         continue-on-error: true
 
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
@@ -96,21 +98,3 @@ jobs:
 
     outputs:
       login_success: ${{ steps.login.outcome == 'success' }}
-
-  deploy:
-    name: Deploy to Fly.io
-    needs: docker-build-push
-    runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.docker-build-push.outputs.login_success == 'true'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Deploy to Fly.io
-        run: flyctl deploy --remote-only
-        working-directory: backend
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
