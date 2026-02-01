@@ -140,9 +140,50 @@ firebase deploy --only functions
    firebase functions:config:set database.url="your-database-url" jwt.secret="your-jwt-secret"
    ```
 
+### Fly.io Deployment (Recommended)
+
+The app is configured for Fly.io deployment:
+
+```bash
+# Install Fly CLI
+brew install flyctl
+
+# Login to Fly.io
+fly auth login
+
+# Create the apps (first time only)
+cd backend && fly apps create od-sifra-api
+cd ../web && fly apps create od-sifra-web
+
+# Create a PostgreSQL database
+fly postgres create --name od-sifra-db
+
+# Attach database to API
+cd backend && fly postgres attach od-sifra-db
+
+# Set secrets for the API
+fly secrets set JWT_SECRET="your-jwt-secret" -a od-sifra-api
+
+# Deploy the API
+cd backend && fly deploy
+
+# Set the API URL for the web app
+fly secrets set NEXT_PUBLIC_API_URL="https://od-sifra-api.fly.dev/api" -a od-sifra-web
+
+# Deploy the web app
+cd web && fly deploy
+```
+
+#### GitHub Actions (CI/CD)
+
+Add `FLY_API_TOKEN` secret to your GitHub repo:
+```bash
+fly tokens create deploy -x 999999h
+```
+
 ### Alternative: Docker Deployment
 
-The app also supports Docker deployment via JFrog Fly. See `docker-compose.yml` for local development.
+The app also supports Docker deployment. See `docker-compose.yml` for local development.
 
 ## License
 
