@@ -2,7 +2,7 @@ app = "od-sifra-api"
 primary_region = "iad"
 
 [build]
-  image = "moriariri/od-sifra-backend:latest"
+  image = "odsifra.jfrog.io/docker/od-sifra-backend:latest"
 
 [env]
   NODE_ENV = "production"
