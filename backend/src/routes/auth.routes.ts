@@ -3,8 +3,22 @@ import { body } from 'express-validator';
 import { validate } from '../middleware/validate';
 import { authService } from '../services/auth.service';
 import { authenticate, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
+
+// Debug endpoint to check admin user
+router.get('/debug-admin', async (_req: Request, res: Response) => {
+  try {
+    const admin = await prisma.user.findUnique({
+      where: { email: 'moria.mann97@gmail.com' },
+      select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+    });
+    res.json({ adminExists: !!admin, admin });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Register
 router.post(
