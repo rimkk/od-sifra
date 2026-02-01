@@ -13,8 +13,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: fly.jfrog.ai
-  IMAGE_NAME: od-sifra-web
+  REGISTRY: p1-flylnp1.jfrogdev.org
+  IMAGE_NAME: docker/od-sifra-web
 
 jobs:
   test:
