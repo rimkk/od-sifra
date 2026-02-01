@@ -32,11 +32,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Setup JFrog Fly
-        uses: jfrog/fly-action@v1
-        with:
-          url: https://odsifra.jfrog.io
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install --workspace=backend
