@@ -3,9 +3,31 @@ import { body, param, query } from 'express-validator';
 import { validate } from '../middleware/validate';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
-import { UserRole, StageType, ActivityType } from '@prisma/client';
+import { UserRole, StageType, ActivityType, ProjectStatus } from '@prisma/client';
 
 const router = Router();
+
+// Get employees (for owner selection)
+router.get('/employees', authenticate, authorize(UserRole.ADMIN, UserRole.EMPLOYEE), async (req: AuthRequest, res: Response) => {
+  try {
+    const employees = await prisma.user.findMany({
+      where: {
+        role: { in: [UserRole.ADMIN, UserRole.EMPLOYEE] },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    res.json({ employees });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Get all projects for a customer account
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
@@ -13,18 +35,20 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     let projects;
 
+    const projectInclude = {
+      customerAccount: { select: { id: true, name: true, email: true, phone: true } },
+      listings: { select: { id: true, stage: true } },
+      _count: { select: { listings: true, activities: true } },
+    };
+
     if (user.role === UserRole.ADMIN) {
       // Admin sees all projects
       projects = await prisma.project.findMany({
-        include: {
-          customerAccount: { select: { id: true, name: true } },
-          listings: { select: { id: true, stage: true } },
-          _count: { select: { listings: true, activities: true } },
-        },
+        include: projectInclude,
         orderBy: { updatedAt: 'desc' },
       });
     } else if (user.role === UserRole.EMPLOYEE) {
-      // Employee sees projects for their assigned accounts
+      // Employee sees projects for their assigned accounts + projects they own
       const assignments = await prisma.customerAssignment.findMany({
         where: { employeeId: user.id },
         select: { customerAccountId: true },
@@ -32,12 +56,13 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       const accountIds = assignments.map((a) => a.customerAccountId);
 
       projects = await prisma.project.findMany({
-        where: { customerAccountId: { in: accountIds } },
-        include: {
-          customerAccount: { select: { id: true, name: true } },
-          listings: { select: { id: true, stage: true } },
-          _count: { select: { listings: true, activities: true } },
+        where: {
+          OR: [
+            { customerAccountId: { in: accountIds } },
+            { ownerId: user.id },
+          ],
         },
+        include: projectInclude,
         orderBy: { updatedAt: 'desc' },
       });
     } else {
@@ -55,7 +80,15 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Add stage counts to each project
+    // Get owner names for projects
+    const ownerIds = projects.filter((p: any) => p.ownerId).map((p: any) => p.ownerId);
+    const owners = ownerIds.length > 0 ? await prisma.user.findMany({
+      where: { id: { in: ownerIds } },
+      select: { id: true, name: true },
+    }) : [];
+    const ownerMap = Object.fromEntries(owners.map((o) => [o.id, o.name]));
+
+    // Add stage counts and owner name to each project
     const projectsWithCounts = projects.map((project: any) => {
       const stageCounts: Record<string, number> = {};
       project.listings.forEach((listing: any) => {
@@ -64,6 +97,7 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
       return {
         ...project,
         stageCounts,
+        ownerName: project.ownerId ? ownerMap[project.ownerId] : null,
         listings: undefined, // Remove raw listings
       };
     });
@@ -129,29 +163,59 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Create project
+// Create project (optionally create new customer account inline)
 router.post(
   '/',
   authenticate,
   authorize(UserRole.ADMIN, UserRole.EMPLOYEE),
   validate([
     body('name').trim().notEmpty().withMessage('Project name is required'),
-    body('customerAccountId').isUUID().withMessage('Valid customer account ID required'),
+    body('customerAccountId').optional().isUUID().withMessage('Valid customer account ID'),
+    // New customer account fields (used if customerAccountId not provided)
+    body('newCustomer.name').optional().trim().notEmpty(),
+    body('newCustomer.email').optional().isEmail(),
+    body('newCustomer.phone').optional().trim(),
     body('description').optional().trim(),
     body('targetBudget').optional().isNumeric(),
     body('targetProperties').optional().isInt({ min: 1 }),
+    body('ownerId').optional().isUUID(),
+    body('status').optional().isIn(['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']),
   ]),
   async (req: AuthRequest, res: Response) => {
     try {
-      const { name, customerAccountId, description, targetBudget, targetProperties } = req.body;
+      const { name, customerAccountId, newCustomer, description, targetBudget, targetProperties, ownerId, status } = req.body;
+
+      let finalCustomerAccountId = customerAccountId;
+
+      // Create new customer account if needed
+      if (!customerAccountId && newCustomer?.name) {
+        const newAccount = await prisma.customerAccount.create({
+          data: {
+            name: newCustomer.name,
+            email: newCustomer.email,
+            phone: newCustomer.phone,
+            ownerId: ownerId || req.user!.id,
+          },
+        });
+        finalCustomerAccountId = newAccount.id;
+      }
+
+      if (!finalCustomerAccountId) {
+        return res.status(400).json({ error: 'Either customerAccountId or newCustomer is required' });
+      }
 
       const project = await prisma.project.create({
         data: {
           name,
-          customerAccountId,
+          customerAccountId: finalCustomerAccountId,
           description,
           targetBudget,
           targetProperties,
+          ownerId: ownerId || req.user!.id, // Default to creator
+          status: status || ProjectStatus.ACTIVE,
+        },
+        include: {
+          customerAccount: { select: { id: true, name: true } },
         },
       });
 
@@ -160,7 +224,7 @@ router.post(
         data: {
           projectId: project.id,
           userId: req.user!.id,
-          type: ActivityType.STATUS_CHANGED,
+          type: ActivityType.PROJECT_CREATED,
           title: 'Project created',
           description: `Project "${name}" was created`,
         },
@@ -184,11 +248,17 @@ router.patch(
     body('description').optional().trim(),
     body('targetBudget').optional().isNumeric(),
     body('targetProperties').optional().isInt({ min: 1 }),
+    body('ownerId').optional().isUUID(),
+    body('status').optional().isIn(['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED']),
+    body('startDate').optional().isISO8601(),
+    body('targetEndDate').optional().isISO8601(),
   ]),
   async (req: AuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { name, description, targetBudget, targetProperties } = req.body;
+      const { name, description, targetBudget, targetProperties, ownerId, status, startDate, targetEndDate } = req.body;
+
+      const oldProject = await prisma.project.findUnique({ where: { id } });
 
       const project = await prisma.project.update({
         where: { id },
@@ -197,10 +267,46 @@ router.patch(
           ...(description !== undefined && { description }),
           ...(targetBudget !== undefined && { targetBudget }),
           ...(targetProperties !== undefined && { targetProperties }),
+          ...(ownerId !== undefined && { ownerId }),
+          ...(status && { status }),
+          ...(startDate && { startDate: new Date(startDate) }),
+          ...(targetEndDate && { targetEndDate: new Date(targetEndDate) }),
+        },
+        include: {
+          customerAccount: { select: { id: true, name: true } },
         },
       });
 
+      // Log status change
+      if (status && oldProject?.status !== status) {
+        await prisma.activity.create({
+          data: {
+            projectId: id,
+            userId: req.user!.id,
+            type: ActivityType.STATUS_CHANGED,
+            title: 'Project status changed',
+            description: `Status changed from ${oldProject?.status} to ${status}`,
+          },
+        });
+      }
+
       res.json({ project });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Delete project
+router.delete(
+  '/:id',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      await prisma.project.delete({ where: { id } });
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

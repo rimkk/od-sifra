@@ -142,14 +142,19 @@ export const notificationApi = {
 export const projectApi = {
   getAll: () => api.get('/projects'),
   getById: (id: string) => api.get(`/projects/${id}`),
+  getEmployees: () => api.get('/projects/employees'),
   create: (data: {
     name: string;
-    customerAccountId: string;
+    customerAccountId?: string;
+    newCustomer?: { name: string; email?: string; phone?: string };
     description?: string;
     targetBudget?: number;
     targetProperties?: number;
+    ownerId?: string;
+    status?: string;
   }) => api.post('/projects', data),
   update: (id: string, data: any) => api.patch(`/projects/${id}`, data),
+  delete: (id: string) => api.delete(`/projects/${id}`),
   getActivities: (id: string, page = 1) => api.get(`/projects/${id}/activities?page=${page}`),
 };
 

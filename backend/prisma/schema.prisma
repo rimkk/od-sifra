@@ -65,6 +65,16 @@ enum ActivityType {
   DOCUMENT_UPLOADED
   STATUS_CHANGED
   COMMENT_ADDED
+  PROJECT_CREATED
+  PROJECT_REMOVED
+}
+
+// Project status
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
 }
 
 // Renovation status enum
@@ -100,6 +110,9 @@ model CustomerAccount {
   id          String   @id @default(uuid())
   name        String   // Account name (e.g., "Smith Family")
   description String?
+  phone       String?
+  email       String?  // Primary contact email
+  ownerId     String?  @map("owner_id") // Account manager (Admin/Employee)
   isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -115,15 +128,19 @@ model CustomerAccount {
 
 // Project model - Like a Monday.com board for property acquisition
 model Project {
-  id                String   @id @default(uuid())
-  customerAccountId String   @map("customer_account_id")
-  name              String   // e.g., "Miami Investment Properties"
+  id                String        @id @default(uuid())
+  customerAccountId String        @map("customer_account_id")
+  name              String        // e.g., "Miami Investment Properties"
   description       String?
-  targetBudget      Decimal? @map("target_budget") @db.Decimal(14, 2)
-  targetProperties  Int?     @map("target_properties")
-  isActive          Boolean  @default(true) @map("is_active")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  status            ProjectStatus @default(ACTIVE)
+  ownerId           String?       @map("owner_id") // Project manager (Admin/Employee)
+  targetBudget      Decimal?      @map("target_budget") @db.Decimal(14, 2)
+  targetProperties  Int?          @map("target_properties")
+  startDate         DateTime?     @map("start_date")
+  targetEndDate     DateTime?     @map("target_end_date")
+  isActive          Boolean       @default(true) @map("is_active")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
   // Relations
   customerAccount   CustomerAccount   @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
