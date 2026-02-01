@@ -3,7 +3,6 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 
 import authRoutes from './routes/auth.routes';
 import workspaceRoutes from './routes/workspace.routes';
@@ -15,14 +14,9 @@ import inviteRoutes from './routes/invite.routes';
 import threadRoutes from './routes/thread.routes';
 import notificationRoutes from './routes/notification.routes';
 import { errorHandler } from './middleware/errorHandler';
+import { prisma } from './lib/prisma';
 
 dotenv.config();
-
-// Test database connection on startup
-const prisma = new PrismaClient();
-prisma.$connect()
-  .then(() => console.log('✅ Database connected'))
-  .catch((err) => console.error('❌ Database connection failed:', err.message));
 
 const app = express();
 const httpServer = createServer(app);
@@ -77,8 +71,28 @@ app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+// Verify database connection before starting server
+async function startServer() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connected');
+    
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('❌ Database connection failed:', err);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down...');
+  await prisma.$disconnect();
+  process.exit(0);
 });
+
+startServer();
 
 export { app, httpServer, io };

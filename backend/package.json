@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "build": "prisma generate && tsc",
-    "start": "node dist/app.js",
-    "start:migrate": "prisma db push && node dist/app.js",
+    "start": "prisma migrate deploy && node dist/app.js",
+    "start:no-migrate": "node dist/app.js",
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:prod": "prisma migrate deploy",
