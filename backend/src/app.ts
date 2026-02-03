@@ -76,24 +76,11 @@ app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
 
-// Sync database schema and start server
+// Verify database connection before starting server
 async function startServer() {
   try {
     await prisma.$connect();
     console.log('✅ Database connected');
-
-    // Ensure email_verified column exists
-    console.log('🔄 Checking database schema...');
-    try {
-      await prisma.$executeRawUnsafe(`
-        ALTER TABLE users 
-        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false
-      `);
-      console.log('✅ Database schema verified');
-    } catch (schemaError: any) {
-      // Column might already exist or other non-critical error
-      console.log('⚠️ Schema check:', schemaError.message || schemaError);
-    }
     
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

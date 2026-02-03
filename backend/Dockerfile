@@ -19,8 +19,8 @@ RUN npx prisma generate
 # Build TypeScript
 RUN npm run build
 
-# Prune dev dependencies after build (keeps Prisma client)
-RUN npm prune --omit=dev
+# Keep prisma for db push at runtime
+# RUN npm prune --omit=dev
 
 # Production stage
 FROM node:20-alpine AS production
@@ -52,5 +52,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
-# Start application
-CMD ["node", "dist/app.js"]
+# Start application with schema sync
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node dist/app.js"]
