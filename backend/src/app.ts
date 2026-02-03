@@ -3,7 +3,6 @@ import cors from 'cors';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import dotenv from 'dotenv';
-import { execSync } from 'child_process';
 
 import authRoutes from './routes/auth.routes';
 import workspaceRoutes from './routes/workspace.routes';
@@ -80,20 +79,21 @@ const PORT = process.env.PORT || 3000;
 // Sync database schema and start server
 async function startServer() {
   try {
-    // Run prisma db push to sync schema
-    console.log('🔄 Syncing database schema...');
-    try {
-      execSync('npx prisma db push --accept-data-loss', { 
-        stdio: 'inherit',
-        timeout: 60000 
-      });
-      console.log('✅ Database schema synced');
-    } catch (dbPushError) {
-      console.error('⚠️ prisma db push failed, continuing anyway:', dbPushError);
-    }
-
     await prisma.$connect();
     console.log('✅ Database connected');
+
+    // Ensure email_verified column exists
+    console.log('🔄 Checking database schema...');
+    try {
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE users 
+        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false
+      `);
+      console.log('✅ Database schema verified');
+    } catch (schemaError: any) {
+      // Column might already exist or other non-critical error
+      console.log('⚠️ Schema check:', schemaError.message || schemaError);
+    }
     
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
