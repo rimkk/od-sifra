@@ -66,12 +66,12 @@ app.post('/api/admin/migrate', async (req, res) => {
       )
     `).then(() => results.push('workspaces table created')).catch((e: any) => results.push('workspaces: ' + e.message));
 
-    // Create workspace_members table
+    // Create workspace_members table (user_id as TEXT to match users.id)
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS workspace_members (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
         role VARCHAR(50) DEFAULT 'CUSTOMER',
         joined_at TIMESTAMP DEFAULT NOW(),
         is_active BOOLEAN DEFAULT true,
