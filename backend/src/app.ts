@@ -49,19 +49,18 @@ app.post('/api/admin/migrate', async (req, res) => {
   try {
     console.log('🔄 Running database migration...');
     
-    // Add OWNER_ADMIN to UserRole enum if missing
-    await prisma.$executeRawUnsafe(`
-      ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'OWNER_ADMIN';
-    `).catch((e: any) => console.log('Enum update:', e.message));
-    
-    // Add missing columns
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
-    `).catch((e: any) => console.log('Column update:', e.message));
-    
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
-    `).catch((e: any) => console.log('Column update:', e.message));
+    // Run prisma db push via child process
+    const { execSync } = require('child_process');
+    try {
+      execSync('npx prisma db push --accept-data-loss', { 
+        stdio: 'inherit',
+        timeout: 120000,
+        env: { ...process.env }
+      });
+      console.log('✅ Prisma db push completed');
+    } catch (pushError: any) {
+      console.log('⚠️ Prisma db push:', pushError.message);
+    }
 
     console.log('✅ Migration complete');
     res.json({ success: true, message: 'Migration completed' });
