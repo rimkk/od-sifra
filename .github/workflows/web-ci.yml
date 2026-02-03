@@ -49,7 +49,7 @@ jobs:
         run: npm run build
         working-directory: web
         env:
-          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://api.odsifra.com/api' }}
+          NEXT_PUBLIC_API_URL: ${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
 
   docker-build-push:
     name: Build & Push Docker Image
@@ -90,7 +90,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://api.odsifra.com/api' }}
+            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
 
       - name: Build and Push Docker image
         if: steps.fly-setup.outcome == 'success'
@@ -103,4 +103,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://api.odsifra.com/api' }}
+            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
