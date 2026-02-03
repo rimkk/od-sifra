@@ -44,6 +44,33 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Database migration endpoint (one-time use)
+app.post('/api/admin/migrate', async (req, res) => {
+  try {
+    console.log('🔄 Running database migration...');
+    
+    // Add OWNER_ADMIN to UserRole enum if missing
+    await prisma.$executeRawUnsafe(`
+      ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'OWNER_ADMIN';
+    `).catch((e: any) => console.log('Enum update:', e.message));
+    
+    // Add missing columns
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false;
+    `).catch((e: any) => console.log('Column update:', e.message));
+    
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;
+    `).catch((e: any) => console.log('Column update:', e.message));
+
+    console.log('✅ Migration complete');
+    res.json({ success: true, message: 'Migration completed' });
+  } catch (error: any) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/workspaces', workspaceRoutes);
