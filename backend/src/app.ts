@@ -44,25 +44,38 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Database migration endpoint - runs prisma db push
+// Database migration endpoint - drops and recreates all tables with prisma
 app.post('/api/admin/migrate', async (req, res) => {
   try {
     console.log('🔄 Running database migration...');
     const results: string[] = [];
+    const { execSync } = require('child_process');
     
-    // First try prisma db push for full schema sync
+    // Drop tables except users to allow prisma db push to recreate with correct types
+    const tablesToDrop = [
+      'notifications', 'messages', 'thread_participants', 'message_threads',
+      'invites', 'activity_logs', 'comments', 'sub_tasks', 'task_assignments',
+      'task_field_values', 'tasks', 'columns', 'groups', 'board_members', 'boards',
+      'workspace_members', 'workspaces'
+      // Note: NOT dropping 'users' to preserve admin account
+    ];
+    
+    for (const table of tablesToDrop) {
+      await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${table}" CASCADE`)
+        .catch(() => {});
+    }
+    results.push('dropped old tables');
+    
+    // Run prisma db push
     try {
-      const { execSync } = require('child_process');
       execSync('npx prisma db push --accept-data-loss --skip-generate', { 
         stdio: 'pipe',
         timeout: 120000 
       });
       results.push('prisma db push ✓');
-      console.log('✅ Prisma db push completed');
       return res.json({ success: true, message: 'Full schema sync completed', results });
     } catch (e: any) {
-      results.push('prisma db push failed, using manual SQL');
-      console.log('⚠️ Prisma db push failed, falling back to manual SQL');
+      results.push('prisma failed: ' + (e.stderr?.toString() || e.message));
     }
     
     // Create all tables
