@@ -44,36 +44,36 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Database migration endpoint - drops and recreates all tables with prisma
+// Database reset endpoint - completely resets database for fresh start
 app.post('/api/admin/migrate', async (req, res) => {
   try {
-    console.log('🔄 Running database migration...');
+    console.log('🔄 Running complete database reset...');
     const results: string[] = [];
     const { execSync } = require('child_process');
     
-    // Drop tables except users to allow prisma db push to recreate with correct types
-    const tablesToDrop = [
-      'notifications', 'messages', 'thread_participants', 'message_threads',
-      'invites', 'activity_logs', 'comments', 'sub_tasks', 'task_assignments',
-      'task_field_values', 'tasks', 'columns', 'groups', 'board_members', 'boards',
-      'workspace_members', 'workspaces'
-      // Note: NOT dropping 'users' to preserve admin account
-    ];
+    // Drop ALL tables and types for fresh start
+    await prisma.$executeRawUnsafe(`
+      DO $$ DECLARE
+        r RECORD;
+      BEGIN
+        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+          EXECUTE 'DROP TABLE IF EXISTS "' || r.tablename || '" CASCADE';
+        END LOOP;
+        FOR r IN (SELECT typname FROM pg_type WHERE typtype = 'e' AND typnamespace = 'public'::regnamespace) LOOP
+          EXECUTE 'DROP TYPE IF EXISTS "' || r.typname || '" CASCADE';
+        END LOOP;
+      END $$;
+    `).catch(() => {});
+    results.push('cleared database');
     
-    for (const table of tablesToDrop) {
-      await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${table}" CASCADE`)
-        .catch(() => {});
-    }
-    results.push('dropped old tables');
-    
-    // Run prisma db push
+    // Run prisma db push to create fresh schema
     try {
       execSync('npx prisma db push --accept-data-loss --skip-generate', { 
         stdio: 'pipe',
         timeout: 120000 
       });
       results.push('prisma db push ✓');
-      return res.json({ success: true, message: 'Full schema sync completed', results });
+      return res.json({ success: true, message: 'Database reset complete - please run setup again', results });
     } catch (e: any) {
       results.push('prisma failed: ' + (e.stderr?.toString() || e.message));
     }
