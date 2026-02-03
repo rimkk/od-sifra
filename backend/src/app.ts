@@ -50,15 +50,16 @@ app.post('/api/admin/migrate', async (req, res) => {
     console.log('🔄 Running database migration...');
     const results: string[] = [];
     
-    // Create workspaces table
+    // Drop and recreate workspaces table
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS workspaces CASCADE`).catch(() => {});
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS workspaces (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name VARCHAR(255) NOT NULL,
-        slug VARCHAR(255) UNIQUE NOT NULL,
+      CREATE TABLE workspaces (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        name TEXT NOT NULL,
+        slug TEXT UNIQUE NOT NULL,
         description TEXT,
-        logo_url VARCHAR(500),
-        default_currency VARCHAR(10) DEFAULT 'USD',
+        logo_url TEXT,
+        default_currency TEXT DEFAULT 'USD',
         settings JSONB,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW(),
@@ -66,13 +67,14 @@ app.post('/api/admin/migrate', async (req, res) => {
       )
     `).then(() => results.push('workspaces table created')).catch((e: any) => results.push('workspaces: ' + e.message));
 
-    // Create workspace_members table (user_id as TEXT to match users.id)
+    // Drop and recreate workspace_members table
+    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS workspace_members CASCADE`).catch(() => {});
     await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS workspace_members (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+      CREATE TABLE workspace_members (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        workspace_id TEXT NOT NULL,
         user_id TEXT NOT NULL,
-        role VARCHAR(50) DEFAULT 'CUSTOMER',
+        role TEXT DEFAULT 'CUSTOMER',
         joined_at TIMESTAMP DEFAULT NOW(),
         is_active BOOLEAN DEFAULT true,
         UNIQUE(workspace_id, user_id)
