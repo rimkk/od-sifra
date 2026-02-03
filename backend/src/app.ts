@@ -102,9 +102,22 @@ app.set('io', io);
 
 const PORT = process.env.PORT || 3000;
 
-// Verify database connection before starting server
+// Sync database schema and start server
 async function startServer() {
   try {
+    // Run prisma db push to sync schema
+    console.log('🔄 Running prisma db push...');
+    try {
+      const { execSync } = require('child_process');
+      execSync('npx prisma db push --accept-data-loss', { 
+        stdio: 'inherit',
+        timeout: 120000 
+      });
+      console.log('✅ Database schema synced');
+    } catch (e: any) {
+      console.error('⚠️ prisma db push error:', e.message);
+    }
+
     await prisma.$connect();
     console.log('✅ Database connected');
     
