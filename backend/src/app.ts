@@ -44,42 +44,112 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Database migration endpoint (one-time use)
+// Database migration endpoint - creates all missing tables
 app.post('/api/admin/migrate', async (req, res) => {
   try {
     console.log('🔄 Running database migration...');
     const results: string[] = [];
     
-    // Drop and recreate workspaces table
-    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS workspaces CASCADE`).catch(() => {});
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE workspaces (
+    // Create all tables
+    const tables = [
+      `CREATE TABLE IF NOT EXISTS workspaces (
         id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        name TEXT NOT NULL,
-        slug TEXT UNIQUE NOT NULL,
-        description TEXT,
-        logo_url TEXT,
-        default_currency TEXT DEFAULT 'USD',
-        settings JSONB,
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      )
-    `).then(() => results.push('workspaces table created')).catch((e: any) => results.push('workspaces: ' + e.message));
+        name TEXT NOT NULL, slug TEXT UNIQUE NOT NULL, description TEXT,
+        logo_url TEXT, default_currency TEXT DEFAULT 'USD', settings JSONB,
+        is_active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS workspace_members (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        workspace_id TEXT NOT NULL, user_id TEXT NOT NULL, role TEXT DEFAULT 'CUSTOMER',
+        joined_at TIMESTAMP DEFAULT NOW(), is_active BOOLEAN DEFAULT true, UNIQUE(workspace_id, user_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS boards (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        workspace_id TEXT NOT NULL, created_by_id TEXT NOT NULL, name TEXT NOT NULL,
+        description TEXT, type TEXT DEFAULT 'GENERAL', color TEXT, icon TEXT,
+        is_template BOOLEAN DEFAULT false, is_public BOOLEAN DEFAULT false, settings JSONB,
+        is_active BOOLEAN DEFAULT true, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS board_members (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        board_id TEXT NOT NULL, user_id TEXT NOT NULL, can_edit BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(), UNIQUE(board_id, user_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS groups (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        board_id TEXT NOT NULL, name TEXT NOT NULL, color TEXT, position INT DEFAULT 0,
+        collapsed BOOLEAN DEFAULT false, is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS columns (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        board_id TEXT NOT NULL, name TEXT NOT NULL, type TEXT NOT NULL, width INT DEFAULT 150,
+        position INT DEFAULT 0, settings JSONB, is_required BOOLEAN DEFAULT false, is_visible BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        group_id TEXT NOT NULL, created_by_id TEXT NOT NULL, name TEXT NOT NULL,
+        position INT DEFAULT 0, is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS task_field_values (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        task_id TEXT NOT NULL, column_id TEXT NOT NULL, value JSONB,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(task_id, column_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS task_assignments (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        task_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT NOW(), UNIQUE(task_id, user_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS sub_tasks (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        task_id TEXT NOT NULL, name TEXT NOT NULL, is_completed BOOLEAN DEFAULT false,
+        position INT DEFAULT 0, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS comments (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        task_id TEXT NOT NULL, user_id TEXT NOT NULL, content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS activity_logs (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        task_id TEXT, user_id TEXT NOT NULL, action TEXT NOT NULL, details JSONB, created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS invites (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        workspace_id TEXT NOT NULL, email TEXT NOT NULL, role TEXT DEFAULT 'CUSTOMER',
+        token TEXT UNIQUE NOT NULL, status TEXT DEFAULT 'PENDING', invited_by_id TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL, accepted_at TIMESTAMP, created_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS message_threads (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        workspace_id TEXT NOT NULL, title TEXT, is_group BOOLEAN DEFAULT false,
+        created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS thread_participants (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        thread_id TEXT NOT NULL, user_id TEXT NOT NULL, last_read_at TIMESTAMP, joined_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(thread_id, user_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        thread_id TEXT NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL,
+        is_edited BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+        user_id TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, message TEXT, link TEXT,
+        is_read BOOLEAN DEFAULT false, data JSONB, created_at TIMESTAMP DEFAULT NOW()
+      )`
+    ];
 
-    // Drop and recreate workspace_members table
-    await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS workspace_members CASCADE`).catch(() => {});
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE workspace_members (
-        id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-        workspace_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        role TEXT DEFAULT 'CUSTOMER',
-        joined_at TIMESTAMP DEFAULT NOW(),
-        is_active BOOLEAN DEFAULT true,
-        UNIQUE(workspace_id, user_id)
-      )
-    `).then(() => results.push('workspace_members table created')).catch((e: any) => results.push('workspace_members: ' + e.message));
+    for (const sql of tables) {
+      const tableName = sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/)?.[1] || 'unknown';
+      await prisma.$executeRawUnsafe(sql)
+        .then(() => results.push(`${tableName} ✓`))
+        .catch((e: any) => results.push(`${tableName}: ${e.message}`));
+    }
 
     console.log('✅ Migration complete:', results);
     res.json({ success: true, message: 'Migration completed', results });
