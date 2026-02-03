@@ -151,6 +151,14 @@ app.post('/api/admin/migrate', async (req, res) => {
         .catch((e: any) => results.push(`${tableName}: ${e.message}`));
     }
 
+    // Fix UserRole enum - add missing values
+    const enumValues = ['OWNER_ADMIN', 'ADMIN', 'EMPLOYEE', 'CUSTOMER'];
+    for (const val of enumValues) {
+      await prisma.$executeRawUnsafe(`ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS '${val}'`)
+        .then(() => results.push(`enum ${val} ✓`))
+        .catch(() => {}); // Ignore if already exists
+    }
+
     console.log('✅ Migration complete:', results);
     res.json({ success: true, message: 'Migration completed', results });
   } catch (error: any) {
