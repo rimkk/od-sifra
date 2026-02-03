@@ -44,11 +44,26 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Database migration endpoint - creates all missing tables
+// Database migration endpoint - runs prisma db push
 app.post('/api/admin/migrate', async (req, res) => {
   try {
     console.log('🔄 Running database migration...');
     const results: string[] = [];
+    
+    // First try prisma db push for full schema sync
+    try {
+      const { execSync } = require('child_process');
+      execSync('npx prisma db push --accept-data-loss --skip-generate', { 
+        stdio: 'pipe',
+        timeout: 120000 
+      });
+      results.push('prisma db push ✓');
+      console.log('✅ Prisma db push completed');
+      return res.json({ success: true, message: 'Full schema sync completed', results });
+    } catch (e: any) {
+      results.push('prisma db push failed, using manual SQL');
+      console.log('⚠️ Prisma db push failed, falling back to manual SQL');
+    }
     
     // Create all tables
     const tables = [
