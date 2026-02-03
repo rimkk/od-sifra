@@ -48,22 +48,39 @@ app.get('/health', (req, res) => {
 app.post('/api/admin/migrate', async (req, res) => {
   try {
     console.log('🔄 Running database migration...');
+    const results: string[] = [];
     
-    // Run prisma db push via child process
-    const { execSync } = require('child_process');
-    try {
-      execSync('npx prisma db push --accept-data-loss', { 
-        stdio: 'inherit',
-        timeout: 120000,
-        env: { ...process.env }
-      });
-      console.log('✅ Prisma db push completed');
-    } catch (pushError: any) {
-      console.log('⚠️ Prisma db push:', pushError.message);
-    }
+    // Create workspaces table
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS workspaces (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        description TEXT,
+        logo_url VARCHAR(500),
+        default_currency VARCHAR(10) DEFAULT 'USD',
+        settings JSONB,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `).then(() => results.push('workspaces table created')).catch((e: any) => results.push('workspaces: ' + e.message));
 
-    console.log('✅ Migration complete');
-    res.json({ success: true, message: 'Migration completed' });
+    // Create workspace_members table
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS workspace_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+        role VARCHAR(50) DEFAULT 'CUSTOMER',
+        joined_at TIMESTAMP DEFAULT NOW(),
+        is_active BOOLEAN DEFAULT true,
+        UNIQUE(workspace_id, user_id)
+      )
+    `).then(() => results.push('workspace_members table created')).catch((e: any) => results.push('workspace_members: ' + e.message));
+
+    console.log('✅ Migration complete:', results);
+    res.json({ success: true, message: 'Migration completed', results });
   } catch (error: any) {
     console.error('Migration error:', error);
     res.status(500).json({ error: error.message });
