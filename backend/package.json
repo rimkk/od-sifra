@@ -1,6 +1,6 @@
 {
   "name": "od-sifra-backend",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Od Sifra Backend API",
   "main": "dist/app.js",
   "scripts": {
