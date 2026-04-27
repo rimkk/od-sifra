@@ -1,12 +1,6 @@
 apiVersion: v2
-name: od-sifra-monitoring
-description: Prometheus + Grafana stack for od-sifra
+name: od-sifra
+description: Property management and project tracking platform
 type: application
 version: 0.1.0
-dependencies:
-  - name: prometheus
-    version: "25.x.x"
-    repository: https://odsifra.jfrog.io/artifactory/helm/prometheus-community
-  - name: grafana
-    version: "7.x.x"
-    repository: https://odsifra.jfrog.io/artifactory/helm/grafana
+appVersion: "2.0.0"
