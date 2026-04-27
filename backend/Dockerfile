@@ -23,11 +23,13 @@ RUN npm run build
 # Keep prisma for db push at runtime
 # RUN npm prune --omit=dev
 
-# Production stage
+# Production stage — use Debian slim for Prisma compatibility on arm64
 ARG FLY_REGISTRY
-FROM ${FLY_REGISTRY}/docker/node:20-alpine AS production
+FROM ${FLY_REGISTRY}/docker/node:20-slim AS production
 
 WORKDIR /app
+
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
@@ -42,8 +44,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/dist ./dist
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs nodejs
 
 USER nodejs
 
