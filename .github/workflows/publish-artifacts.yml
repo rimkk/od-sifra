@@ -1,0 +1,51 @@
+name: Publish Artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'artifacts/**'
+      - '.github/workflows/publish-artifacts.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to JFrog Fly
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JFrog Fly
+        uses: jfrog/fly-action@v1
+
+      - name: Upload generic config artifact
+        uses: jfrog/fly-action/upload@v1
+        with:
+          name: od-sifra-config
+          version: ${{ github.sha }}
+          files: |
+            artifacts/generic/deployment-config.json
+            artifacts/generic/env-staging.json
+
+      - name: Upload Helm chart artifact
+        uses: jfrog/fly-action/upload@v1
+        with:
+          name: od-sifra-helm
+          version: ${{ github.sha }}
+          files: |
+            artifacts/helm/Chart.yaml
+            artifacts/helm/values.yaml
+
+      - name: Upload Go service artifact
+        uses: jfrog/fly-action/upload@v1
+        with:
+          name: od-sifra-go-healthcheck
+          version: ${{ github.sha }}
+          files: |
+            artifacts/go/main.go
+            artifacts/go/go.mod

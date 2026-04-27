@@ -1,0 +1,7 @@
+{
+  "NODE_ENV": "staging",
+  "PORT": "3000",
+  "LOG_LEVEL": "debug",
+  "ENABLE_SWAGGER": true,
+  "CORS_ORIGIN": "https://staging.odsifra.com"
+}
