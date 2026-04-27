@@ -46,7 +46,7 @@ jobs:
         with:
           go-version: '1.22'
 
-      - name: Download Go modules through Fly
+      - name: Download Go modules through Fly proxy
         run: go mod download
         working-directory: artifacts/go
 
@@ -54,9 +54,25 @@ jobs:
         run: go build -o /tmp/od-sifra-healthcheck ./main.go
         working-directory: artifacts/go
 
-      - name: Upload Go binary artifact
+      - name: Upload Go binary
         uses: jfrog/fly-action/upload@v1
         with:
           name: od-sifra-go-healthcheck
           version: ${{ github.sha }}
           files: /tmp/od-sifra-healthcheck
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install npm packages through Fly registry
+        run: npm install
+        working-directory: artifacts/npm
+
+      - name: Upload npm artifact
+        uses: jfrog/fly-action/upload@v1
+        with:
+          name: od-sifra-shared-npm
+          version: ${{ github.sha }}
+          files: artifacts/npm/package.json

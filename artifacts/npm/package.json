@@ -1,0 +1,10 @@
+{
+  "name": "@od-sifra/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities for od-sifra platform",
+  "dependencies": {
+    "zod": "^3.22.4",
+    "date-fns": "^3.6.0",
+    "uuid": "^9.0.0"
+  }
+}

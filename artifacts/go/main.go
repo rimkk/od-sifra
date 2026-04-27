@@ -1,10 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type HealthResponse struct {
@@ -14,13 +14,15 @@ type HealthResponse struct {
 }
 
 func main() {
-	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		json.NewEncoder(w).Encode(HealthResponse{
+	r := gin.Default()
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, HealthResponse{
 			Status:    "ok",
 			Timestamp: time.Now().UTC(),
 			Service:   "od-sifra-healthcheck",
 		})
 	})
-	log.Println("healthcheck service running on :9090")
-	http.ListenAndServe(":9090", nil)
+
+	r.Run(":9090")
 }
