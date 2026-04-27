@@ -62,6 +62,9 @@ jobs:
       - name: Setup JFrog Fly
         uses: jfrog/fly-action@v1
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -78,11 +81,12 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./web
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             FLY_REGISTRY=${{ env.FLY_REGISTRY_SUBDOMAIN }}
-            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
+            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'http://localhost:3000/api' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
