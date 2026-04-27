@@ -32,20 +32,31 @@ jobs:
             artifacts/generic/deployment-config.json
             artifacts/generic/env-staging.json
 
-      - name: Upload Helm chart artifact
-        uses: jfrog/fly-action/upload@v1
-        with:
-          name: od-sifra-helm
-          version: ${{ github.sha }}
-          files: |
-            artifacts/helm/Chart.yaml
-            artifacts/helm/values.yaml
+      - name: Install Helm
+        uses: azure/setup-helm@v4
 
-      - name: Upload Go service artifact
+      - name: Package Helm chart
+        run: helm package artifacts/helm --destination /tmp/helm-pkg
+
+      - name: Push Helm chart to Fly
+        run: helm push /tmp/helm-pkg/*.tgz oci://${{ env.FLY_REGISTRY_SUBDOMAIN }}/helmoci
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Download Go modules through Fly
+        run: go mod download
+        working-directory: artifacts/go
+
+      - name: Build Go binary
+        run: go build -o /tmp/od-sifra-healthcheck ./main.go
+        working-directory: artifacts/go
+
+      - name: Upload Go binary artifact
         uses: jfrog/fly-action/upload@v1
         with:
           name: od-sifra-go-healthcheck
           version: ${{ github.sha }}
-          files: |
-            artifacts/go/main.go
-            artifacts/go/go.mod
+          files: /tmp/od-sifra-healthcheck
