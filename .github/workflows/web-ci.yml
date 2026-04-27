@@ -17,7 +17,6 @@ permissions:
   id-token: write
 
 env:
-  REGISTRY: odsifra.jfrog.io
   IMAGE_NAME: docker/od-sifra-web
 
 jobs:
@@ -61,11 +60,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Setup JFrog Fly
-        id: fly-setup
         uses: jfrog/fly-action@v1
-        with:
-          url: https://odsifra.jfrog.io
-        continue-on-error: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -74,33 +69,20 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.FLY_REGISTRY_SUBDOMAIN }}/${{ env.IMAGE_NAME }}
           tags: |
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build Docker image (no push - auth failed)
-        if: steps.fly-setup.outcome != 'success'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./web
-          push: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
-
       - name: Build and Push Docker image
-        if: steps.fly-setup.outcome == 'success'
         uses: docker/build-push-action@v5
         with:
           context: ./web
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            FLY_REGISTRY=${{ env.FLY_REGISTRY_SUBDOMAIN }}
+            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'https://od-sifra-backend-production.up.railway.app/api' }}
