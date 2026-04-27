@@ -1,5 +1,6 @@
 # Build stage
-FROM node:20-alpine AS builder
+ARG FLY_REGISTRY
+FROM ${FLY_REGISTRY}/docker/node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +24,8 @@ RUN npm run build
 # RUN npm prune --omit=dev
 
 # Production stage
-FROM node:20-alpine AS production
+ARG FLY_REGISTRY
+FROM ${FLY_REGISTRY}/docker/node:20-alpine AS production
 
 WORKDIR /app
 

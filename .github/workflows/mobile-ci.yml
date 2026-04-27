@@ -11,6 +11,10 @@ on:
     paths:
       - 'mobile/**'
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   lint-and-typecheck:
     runs-on: ubuntu-latest
@@ -25,6 +29,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Setup JFrog Fly
+        uses: jfrog/fly-action@v1
 
       - name: Install dependencies
         run: npm install
