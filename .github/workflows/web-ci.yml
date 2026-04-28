@@ -1,4 +1,4 @@
-name: Web App CI/CD
+name: Web App CI
 
 on:
   push:
