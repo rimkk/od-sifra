@@ -14,7 +14,7 @@
 
 /* Light mode - Clean minimal */
 :root {
-  --background: #000000;
+  --background: #0A0A0A;
   --background-alt: #FFFFFF;
   --surface: #FFFFFF;
   --surface-hover: #F5F5F5;
@@ -40,7 +40,7 @@
 
 /* Dark mode - Cursor-style black/grey */
 .dark {
-  --background: #000000;
+  --background: #0A0A0A;
   --background-alt: #141414;
   --surface: #141414;
   --surface-hover: #1F1F1F;
