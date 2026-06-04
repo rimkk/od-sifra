@@ -21,7 +21,7 @@ primary_region = "iad"
   interval = "30s"
   method = "GET"
   timeout = "5s"
-  path = "/health"
+  path = "/health/ready"
 
 [[vm]]
   memory = "1gb"

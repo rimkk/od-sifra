@@ -39,7 +39,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check
+// Liveness — process is up
+app.get('/health/live', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Readiness — DB is reachable
+app.get('/health/ready', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: 'ready', timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: 'not_ready', timestamp: new Date().toISOString() });
+  }
+});
+
+// Keep /health as alias for liveness for backwards compatibility
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
