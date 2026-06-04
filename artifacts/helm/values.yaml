@@ -7,3 +7,21 @@ grafana:
   dashboards:
     - od-sifra-backend
     - od-sifra-web
+
+# Resource limits: requests allow scheduling decisions, limits prevent noisy-neighbor starvation.
+# Backend gets more memory than web due to Prisma connection pooling overhead.
+resources:
+  backend:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  web:
+    requests:
+      cpu: "50m"
+      memory: "128Mi"
+    limits:
+      cpu: "250m"
+      memory: "512Mi"
