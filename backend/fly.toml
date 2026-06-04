@@ -24,6 +24,6 @@ primary_region = "iad"
   path = "/health"
 
 [[vm]]
-  memory = "512mb"
+  memory = "1gb"
   cpu_kind = "shared"
   cpus = 1
