@@ -4,15 +4,14 @@ FROM ${FLY_REGISTRY}/docker/node:20-alpine AS builder
 
 WORKDIR /app
 
-ARG NEXT_PUBLIC_API_URL=https://api.odsifra.com/api
-
 COPY package*.json ./
 RUN npm install
 
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+# API_URL injected at runtime via next.config.js rewrites — not baked in at build.
+# Client code uses relative /api/* paths; the rewrite proxies to the real backend per env.
 RUN npm run build
 RUN npm prune --omit=dev
 

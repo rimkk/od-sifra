@@ -89,6 +89,5 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             FLY_REGISTRY=${{ env.FLY_REGISTRY_SUBDOMAIN }}
-            NEXT_PUBLIC_API_URL=${{ vars.API_URL || 'http://localhost:3000/api' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
