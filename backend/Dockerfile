@@ -34,6 +34,7 @@ USER nodejs
 
 EXPOSE 3000
 
+# start-period minimum is 6s — never set to 5s. 15s gives prisma db push time to finish.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health/ready || exit 1
 
